@@ -74,10 +74,11 @@
   <script>
     const REDIRECT_URL = "dashboard.html";
 
-    // عنوان تسجيل الدخول ياخذ اسم المكتب من الاعدادات المحفوظة إن وجدت
-    getOfficeConfig().then(cfg => {
-      document.getElementById('officeTitle').textContent = "مكتب " + (cfg.officialName || "السيد النائب");
-    });
+// عنوان تسجيل الدخول ياخذ اسم المكتب من الاعدادات المحفوظة إن وجدت
+db.collection('office').doc('config').get().then(snap => {
+  const cfg = snap.exists ? snap.data() : {};
+  document.getElementById('officeTitle').textContent = "مكتب " + (cfg.officialName || DEFAULT_OFFICE.officialName || "السيد النائب");
+}).catch(() => {});
 
     // اذا مسجل دخوله مسبقاً حوله على طول
     auth.onAuthStateChanged(user => { if (user) window.location.href = REDIRECT_URL; });
