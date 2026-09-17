@@ -5,7 +5,7 @@
 
 const NAV_ITEMS = [
   { key: "dashboard", label: "الرئيسية", icon: "fa-house", href: "dashboard.html" },
-  { key: "incoming", label: "الكتب الواردة", icon: "fa-envelope", href: "incoming-letters.html" },
+  { key: "incoming", label: "الطلبات الواردة", icon: "fa-envelope", href: "incoming-letters.html" },
   { key: "outgoing", label: "الكتب الرسمية الصادرة", icon: "fa-paper-plane", href: "outgoing-letters.html" },
   { key: "ai", label: "مولد الذكاء الاصطناعي", icon: "fa-wand-magic-sparkles", href: "ai-generator.html" },
   { key: "profile", label: "الملف الشخصي", icon: "fa-user", href: "profile.html" },

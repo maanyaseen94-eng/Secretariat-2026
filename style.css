@@ -4,9 +4,9 @@
   --accent:#3f7ae0;
   --accent-hover:#3568c4;
   --teal:#17a2b8;
-  --green:#28a745;
-  --purple:#6f42c1;
-  --gold:#e0a800;
+  --green:#7d2735;
+  --purple:#1e3a5f;
+  --gold:#c9932c;
   --bg:#f4f6f9;
   --border:#e3e7eb;
   --text-main:#2c3e50;
@@ -81,7 +81,16 @@ body{
 
 /* ---------- Cards / widgets ---------- */
 .welcome-card{
-  background:linear-gradient(180deg,#eef2f8,#e4eaf3);
+  background-color:#f2f0e8;
+  background-image:
+    linear-gradient(135deg, rgba(30,58,95,.07) 25%, transparent 25%),
+    linear-gradient(225deg, rgba(30,58,95,.07) 25%, transparent 25%),
+    linear-gradient(45deg, rgba(201,147,44,.10) 25%, transparent 25%),
+    linear-gradient(315deg, rgba(201,147,44,.10) 25%, transparent 25%);
+  background-position: 22px 0, 22px 0, 0 0, 0 0;
+  background-size: 44px 44px;
+  background-repeat: repeat;
+  border:1px solid rgba(30,58,95,.10);
   border-radius:14px;
   padding:36px 24px;
   text-align:center;

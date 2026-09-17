@@ -74,11 +74,11 @@
   <script>
     const REDIRECT_URL = "dashboard.html";
 
-// عنوان تسجيل الدخول ياخذ اسم المكتب من الاعدادات المحفوظة إن وجدت
-db.collection('office').doc('config').get().then(snap => {
-  const cfg = snap.exists ? snap.data() : {};
-  document.getElementById('officeTitle').textContent = "مكتب " + (cfg.officialName || DEFAULT_OFFICE.officialName || "السيد النائب");
-}).catch(() => {});
+    // عنوان تسجيل الدخول ياخذ اسم المكتب من الاعدادات المحفوظة إن وجدت
+    db.collection('office').doc('config').get().then(snap => {
+      const cfg = snap.exists ? snap.data() : {};
+      document.getElementById('officeTitle').textContent = "مكتب " + (cfg.officialName || DEFAULT_OFFICE.officialName || "السيد النائب");
+    }).catch(() => {});
 
     // اذا مسجل دخوله مسبقاً حوله على طول
     auth.onAuthStateChanged(user => { if (user) window.location.href = REDIRECT_URL; });
@@ -119,7 +119,7 @@ db.collection('office').doc('config').get().then(snap => {
       const password = passwordInput.value;
       if(!identifier || !password) return;
 
-      // إذا إسم المستخدم مو إيميل، عدله حسب نظامك (مثال: username@yourdomain.com)
+      // إذا كتب الموظف اسمه بس (بدون @)، نضيف دومين السكرتارية تلقائياً
       const email = identifier.includes('@') ? identifier : `${identifier}@secretariat.local`;
 
       loginBtn.disabled = true;

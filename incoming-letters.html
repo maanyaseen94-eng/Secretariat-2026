@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>الكتب الواردة</title>
+<title>الطلبات الواردة</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/css/bootstrap.rtl.min.css">
 <link rel="stylesheet" href="style.css">
@@ -17,7 +17,7 @@
 
         <div class="panel">
           <div class="panel-header d-flex justify-content-between align-items-center">
-            <span>الكتب الواردة</span>
+            <span>الطلبات الواردة</span>
             <button class="btn btn-sm btn-light" onclick="location.href='create-letter.html'"><i class="fa-solid fa-plus"></i> كتاب رسمي جديد</button>
           </div>
           <div class="panel-body">
@@ -89,7 +89,7 @@
   <script src="auth-guard.js"></script>
   <script src="sidebar.js"></script>
   <script>
-    renderShell('incoming', 'الكتب الواردة');
+    renderShell('incoming', 'الطلبات الواردة');
 
     let ALL_LETTERS = [];
     let CURRENT_FILTER = 'all';
@@ -102,7 +102,7 @@
         const snap = await db.collection('incoming_letters').orderBy('date', 'desc').get();
         ALL_LETTERS = snap.docs.map(d => Object.assign({ id: d.id }, d.data()));
       } catch(e){
-        console.warn('تعذر جلب الكتب الواردة من Firestore (تحقق من الربط):', e);
+        console.warn('تعذر جلب الطلبات الواردة من Firestore (تحقق من الربط):', e);
         ALL_LETTERS = [];
       }
       renderTable();
@@ -201,8 +201,8 @@
       }));
       const ws = XLSX.utils.json_to_sheet(data);
       const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, 'الكتب الواردة');
-      XLSX.writeFile(wb, 'الكتب_الواردة.xlsx');
+      XLSX.utils.book_append_sheet(wb, ws, 'الطلبات الواردة');
+      XLSX.writeFile(wb, 'الطلبات_الواردة.xlsx');
     }
   </script>
 </body>

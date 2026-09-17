@@ -20,11 +20,11 @@
         </nav>
 
         <div class="welcome-card">
-          <img class="welcome-photo" id="officialPhoto" src="" alt="">
-          <h2 id="welcomeHeading">مرحباً بكم في المكتب</h2>
+          <img class="welcome-photo" id="officialPhoto" src="badge.jpg" alt="">
+          <h2 id="welcomeHeading">سكرتارية النائب المهندس عدي عواد التميمي</h2>
           <p>نعمل معاً لخدمة المواطن وبناء مستقبل أفضل</p>
           <div>
-            <a href="incoming-letters.html" class="btn btn-success me-2"><i class="fa-solid fa-inbox"></i> الكتب الواردة</a>
+            <a href="incoming-letters.html" class="btn btn-success me-2"><i class="fa-solid fa-inbox"></i> الطلبات الواردة</a>
             <a href="create-letter.html" class="btn btn-primary"><i class="fa-solid fa-plus"></i> انشاء كتاب رسمي</a>
           </div>
         </div>
@@ -45,7 +45,7 @@
               <i class="fa-solid fa-file-lines stat-icon"></i>
               <div>
                 <div class="stat-num" id="statOutgoing">0</div>
-                <div class="stat-label">الكتب الرسمية</div>
+                <div class="stat-label">الكتب الرسمية الصادرة</div>
               </div>
               <a href="outgoing-letters.html">عرض الكل <i class="fa-solid fa-arrow-left"></i></a>
             </div>
@@ -55,7 +55,7 @@
               <i class="fa-solid fa-inbox stat-icon"></i>
               <div>
                 <div class="stat-num" id="statIncoming">0</div>
-                <div class="stat-label">الكتب الواردة</div>
+                <div class="stat-label">الطلبات الواردة</div>
               </div>
               <a href="incoming-letters.html">عرض الكل <i class="fa-solid fa-arrow-left"></i></a>
             </div>
@@ -78,9 +78,9 @@
 
     AUTH_READY.then(async () => {
       const cfg = await getOfficeConfig();
-      document.getElementById('welcomeHeading').textContent = "مرحباً بكم في مكتب " + (cfg.officialName || "السيد النائب");
+      document.getElementById('welcomeHeading').textContent = "سكرتارية النائب المهندس عدي عواد التميمي";
       if (cfg.photoUrl) document.getElementById('officialPhoto').src = cfg.photoUrl;
-      else document.getElementById('officialPhoto').src = "https://placehold.co/96x96?text=%20";
+      else document.getElementById('officialPhoto').src = "badge.jpg";
 
       // إحصائيات: عدّل حسب المجموعات الفعلية بمشروعك
       try {
