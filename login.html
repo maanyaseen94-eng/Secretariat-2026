@@ -119,7 +119,7 @@
       if(!identifier || !password) return;
 
       // إذا إسم المستخدم مو إيميل، عدله حسب نظامك (مثال: username@yourdomain.com)
-      const email = identifier.includes('@') && identifier.includes('.') ? identifier : `${identifier}@yourdomain.com`;
+      const email = identifier.includes('@') ? identifier : `${identifier}@secretariat.local`;
 
       loginBtn.disabled = true;
       loginBtn.classList.add('loading');
