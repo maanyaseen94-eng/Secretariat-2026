@@ -5,12 +5,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex">
 <title>تسجيل الدخول</title>
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <style>
   :root{ --bg:#eef1f4; --card-bg:#fff; --text-main:#2c3e50; --text-sub:#8a97a3; --border:#e3e7eb; --accent:#3f7ae0; --accent-hover:#3568c4; --danger:#e0554a; }
   *{box-sizing:border-box;}
-  body{ margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center; background:var(--bg); font-family:"Tahoma","Segoe UI",Arial,sans-serif; color:var(--text-main); padding:20px; }
-  .login-card{ width:100%; max-width:340px; background:var(--card-bg); border-radius:14px; box-shadow:0 10px 30px rgba(30,41,59,.08); padding:34px 30px 28px; }
+  body{
+    margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center;
+    font-family:"Tahoma","Segoe UI",Arial,sans-serif; color:var(--text-main); padding:20px;
+    background:#050b14 url('login-bg.jpg') no-repeat center bottom / cover;
+    background-attachment:fixed;
+  }
+  .login-card{ width:100%; max-width:340px; background:rgba(255,255,255,.97); backdrop-filter:blur(2px); border-radius:14px; box-shadow:0 12px 34px rgba(0,0,0,.35); padding:34px 30px 28px; }
   .login-header{ text-align:center; margin-bottom:26px; }
   .login-header h1{ font-size:17px; font-weight:700; margin:0 0 6px; line-height:1.5; }
   .login-header p{ font-size:12.5px; color:var(--text-sub); margin:0; }
@@ -35,8 +42,8 @@
 
   <div class="login-card">
     <div class="login-header">
-      <h1 id="officeTitle">مكتب السيد النائب</h1>
-      <p>يرجى تسجيل الدخول للمتابعة</p>
+      <h1 id="officeTitle">سكرتارية السيد النائب</h1>
+      <p id="officeSubtitle">المذكرة الداخلية</p>
     </div>
 
     <div class="error-msg" id="errorMsg"></div>
@@ -73,12 +80,6 @@
   <script src="firebase-config.js"></script>
   <script>
     const REDIRECT_URL = "dashboard.html";
-
-    // عنوان تسجيل الدخول ياخذ اسم المكتب من الاعدادات المحفوظة إن وجدت
-    db.collection('office').doc('config').get().then(snap => {
-      const cfg = snap.exists ? snap.data() : {};
-      document.getElementById('officeTitle').textContent = "مكتب " + (cfg.officialName || DEFAULT_OFFICE.officialName || "السيد النائب");
-    }).catch(() => {});
 
     // اذا مسجل دخوله مسبقاً حوله على طول
     auth.onAuthStateChanged(user => { if (user) window.location.href = REDIRECT_URL; });
