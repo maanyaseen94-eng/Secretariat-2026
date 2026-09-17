@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>الملف الشخصي</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/css/bootstrap.rtl.min.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-shell">
+    <div id="sidebar-placeholder"></div>
+    <div class="main-content">
+      <div id="topbar-placeholder"></div>
+      <div class="page-body">
+        <div class="panel" style="max-width:640px;">
+          <div class="panel-header">تعديل الملف الشخصي</div>
+          <div class="panel-body">
+            <div class="mb-3">
+              <label class="form-label">الاسم</label>
+              <input type="text" class="form-control" id="fName">
+            </div>
+            <div class="mb-3">
+              <label class="form-label">البريد الالكتروني</label>
+              <input type="email" class="form-control" id="fEmail" disabled>
+              <div class="form-text">تغيير البريد يتطلب إعادة تسجيل الدخول لأسباب أمنية</div>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">كلمة المرور</label>
+              <div class="position-relative">
+                <input type="password" class="form-control" id="fPassword" placeholder="اتركه فارغاً إذا لم ترغب في التغيير">
+                <button type="button" class="btn btn-sm position-absolute top-50 translate-middle-y start-0" style="background:none;" onclick="togglePwd()"><i class="fa-regular fa-eye" id="pwdIcon"></i></button>
+              </div>
+            </div>
+            <button class="btn btn-primary" onclick="updateProfile()">تحديث البيانات</button>
+            <button class="btn btn-secondary" onclick="location.href='dashboard.html'">إلغاء</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/js/bootstrap.bundle.min.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  <script src="firebase-config.js"></script>
+  <script src="auth-guard.js"></script>
+  <script src="sidebar.js"></script>
+  <script>
+    renderShell('profile', 'الملف الشخصي');
+
+    AUTH_READY.then(user => {
+      document.getElementById('fName').value = user.displayName || '';
+      document.getElementById('fEmail').value = user.email || '';
+    });
+
+    function togglePwd(){
+      const input = document.getElementById('fPassword');
+      const icon = document.getElementById('pwdIcon');
+      const show = input.type === 'password';
+      input.type = show ? 'text' : 'password';
+      icon.className = show ? 'fa-regular fa-eye-slash' : 'fa-regular fa-eye';
+    }
+
+    async function updateProfile(){
+      const name = document.getElementById('fName').value.trim();
+      const pwd = document.getElementById('fPassword').value;
+      try {
+        if (name) await CURRENT_USER.updateProfile({ displayName: name });
+        if (pwd) await CURRENT_USER.updatePassword(pwd);
+        alert('تم تحديث البيانات بنجاح');
+      } catch(e){
+        console.error(e);
+        alert('تعذر التحديث: ' + (e.message || 'قد تحتاج إعادة تسجيل الدخول لتغيير كلمة المرور'));
+      }
+    }
+  </script>
+</body>
+</html>

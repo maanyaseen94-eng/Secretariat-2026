@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>عرض الكتاب</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/css/bootstrap.rtl.min.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-shell">
+    <div id="sidebar-placeholder"></div>
+    <div class="main-content">
+      <div id="topbar-placeholder"></div>
+      <div class="page-body">
+
+        <div class="panel">
+          <div class="panel-header">عرض التفاصيل</div>
+          <div class="panel-body" id="content">
+            <p class="text-muted text-center py-4">جارِ التحميل...</p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  <script src="firebase-config.js"></script>
+  <script src="auth-guard.js"></script>
+  <script src="sidebar.js"></script>
+  <script>
+    const params = new URLSearchParams(location.search);
+    const type = params.get('type') || 'incoming';
+    const id = params.get('id');
+    renderShell(type === 'incoming' ? 'incoming' : 'outgoing', 'عرض الكتاب');
+
+    AUTH_READY.then(async () => {
+      const cfg = await getOfficeConfig();
+      const content = document.getElementById('content');
+      if (!id) { content.innerHTML = '<p class="text-danger">لا يوجد معرّف كتاب بالرابط</p>'; return; }
+
+      const coll = type === 'incoming' ? 'incoming_letters' : 'outgoing_letters';
+      let letter;
+      try {
+        const doc = await db.collection(coll).doc(id).get();
+        if (!doc.exists) { content.innerHTML = '<p class="text-danger">لم يتم العثور على الكتاب</p>'; return; }
+        letter = doc.data();
+      } catch(e){ content.innerHTML = '<p class="text-danger">تعذر جلب بيانات الكتاب</p>'; return; }
+
+      content.innerHTML = `
+        <div class="letter-preview-wrap">
+          <div class="letter-page" id="printArea">
+            <div class="letter-header">
+              <div class="emblem">شعار<br>المكتب</div>
+              <div class="ar">جمهورية العراق<br>مجلس النواب<br>مكتب النائب ${cfg.officialName || ''}<br>السكرتارية</div>
+              <div class="en">Republic Of Iraq<br>Council Of Representatives<br>Office of Representative<br>Secretariat</div>
+            </div>
+            <div class="letter-meta">
+              <span>العدد / ${letter.number || '—'}</span>
+              <span>التاريخ / ${letter.date || '—'}</span>
+            </div>
+            <div class="letter-to">الى / ${letter.to || letter.senderEntity || '—'} المحترم</div>
+            <div class="letter-body-text">${letter.body || letter.subject || '—'}</div>
+            <div class="letter-stamp">ختم<br>المكتب</div>
+            <div class="letter-signature">${cfg.managerName || cfg.officeName || ''}</div>
+            <div class="letter-footer-pattern"></div>
+          </div>
+        </div>
+        <div class="d-flex gap-2 justify-content-center mt-3">
+          <button class="btn btn-dark" onclick="window.print()"><i class="fa-solid fa-print"></i> طباعة</button>
+          <button class="btn btn-dark" onclick="downloadPng()"><i class="fa-solid fa-image"></i> تحميل PNG</button>
+        </div>`;
+    });
+
+    function downloadPng(){
+      html2canvas(document.getElementById('printArea'), { scale: 3, backgroundColor: '#fff' }).then(canvas => {
+        const link = document.createElement('a');
+        link.download = 'كتاب.png';
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+      });
+    }
+  </script>
+</body>
+</html>

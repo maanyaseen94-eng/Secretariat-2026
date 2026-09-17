@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>إنشاء كتاب رسمي</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/css/bootstrap.rtl.min.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-shell">
+    <div id="sidebar-placeholder"></div>
+    <div class="main-content">
+      <div id="topbar-placeholder"></div>
+      <div class="page-body">
+
+        <div class="panel mb-0">
+          <div class="panel-header">عرض التفاصيل</div>
+          <div class="panel-body">
+            <div class="row g-4">
+
+              <div class="col-lg-6">
+                <div class="mb-3">
+                  <label class="form-label">رقم الكتاب</label>
+                  <input type="text" class="form-control" id="fNumber" readonly>
+                </div>
+                <div class="mb-3">
+                  <label class="form-label">تاريخ الكتاب *</label>
+                  <input type="date" class="form-control" id="fDate" required>
+                </div>
+                <div class="mb-3">
+                  <label class="form-label">عنوان الكتاب الرسمي *</label>
+                  <input type="text" class="form-control" id="fSubject" required>
+                </div>
+                <div class="mb-3">
+                  <label class="form-label">الى *</label>
+                  <input type="text" class="form-control" id="fTo" required>
+                </div>
+                <div class="mb-3">
+                  <label class="form-label">نص محتوى الكتاب الرسمي *</label>
+                  <textarea class="form-control" id="fBody" rows="6" required></textarea>
+                </div>
+                <div class="mb-3">
+                  <label class="form-label">مرفقات الكتاب</label>
+                  <div id="attachmentFields">
+                    <input type="file" class="form-control mb-2 attachment-input">
+                  </div>
+                  <button type="button" class="btn btn-success btn-sm" onclick="addAttachmentField()"><i class="fa-solid fa-plus"></i> إضافة حقل مرفق آخر</button>
+                  <div class="form-text">الصيغ المدعومة: PDF, Word, Excel, PowerPoint, الصور, TXT, ZIP/RAR/7Z — 10MB كحد أقصى لكل ملف</div>
+                </div>
+                <div class="mb-3">
+                  <label class="form-label d-block">الجهات المستلمة للكتاب *</label>
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="fRecipient" checked>
+                    <label class="form-check-label" for="fRecipient" id="fRecipientLabel">النائب المهندس</label>
+                  </div>
+                </div>
+                <button class="btn btn-primary" onclick="sendLetter()"><i class="fa-solid fa-paper-plane"></i> ارسال</button>
+              </div>
+
+              <div class="col-lg-6">
+                <div class="letter-preview-wrap">
+                  <div class="letter-page" id="printArea">
+                    <div class="letter-header">
+                      <div class="emblem" id="emblemBox">شعار<br>المكتب</div>
+                      <div class="ar">
+                        جمهورية العراق<br>
+                        مجلس النواب<br>
+                        مكتب النائب <span id="pOfficialName">[الاسم]</span><br>
+                        السكرتارية
+                      </div>
+                      <div class="en">
+                        Republic Of Iraq<br>
+                        Council Of Representatives<br>
+                        Office of Representative<br>
+                        Secretariat
+                      </div>
+                    </div>
+                    <div class="letter-meta">
+                      <span>العدد / <span id="pNumber">١</span></span>
+                      <span>التاريخ / <span id="pDate">—</span></span>
+                    </div>
+                    <div class="letter-to">
+                      الى / <span id="pTo">—</span> المحترم
+                    </div>
+                    <div class="letter-body-text" id="pBody">—</div>
+                    <div class="letter-stamp">ختم<br>المكتب</div>
+                    <div class="letter-signature" id="pSignature">—</div>
+                    <div class="letter-footer-pattern"></div>
+                  </div>
+                </div>
+                <div class="d-flex gap-2 justify-content-center mt-3">
+                  <button class="btn btn-dark" onclick="window.print()"><i class="fa-solid fa-print"></i> طباعة الكتاب</button>
+                  <button class="btn btn-dark" onclick="downloadPng()"><i class="fa-solid fa-image"></i> تحميل الكتاب (PNG)</button>
+                </div>
+                <p class="text-center text-muted small mt-2">معاينة الكتاب — صفحة واحدة (A4 بدقة 2481×3508 بكسل)</p>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  <script src="firebase-config.js"></script>
+  <script src="auth-guard.js"></script>
+  <script src="sidebar.js"></script>
+  <script>
+    renderShell('outgoing', 'إنشاء كتاب رسمي');
+
+    let OFFICE_CFG = DEFAULT_OFFICE;
+
+    AUTH_READY.then(async () => {
+      OFFICE_CFG = await getOfficeConfig();
+      document.getElementById('pOfficialName').textContent = OFFICE_CFG.officialName || '[الاسم]';
+      document.getElementById('fRecipientLabel').textContent = OFFICE_CFG.officialName || 'النائب';
+      document.getElementById('pSignature').textContent = OFFICE_CFG.managerName || OFFICE_CFG.officeName || '—';
+      document.getElementById('fDate').value = new Date().toISOString().slice(0,10);
+
+      // رقم كتاب تلقائي = عدد الكتب الصادرة + 1
+      try {
+        const snap = await db.collection('outgoing_letters').get();
+        document.getElementById('fNumber').value = snap.size + 1;
+        document.getElementById('pNumber').textContent = snap.size + 1;
+      } catch(e){ document.getElementById('fNumber').value = 1; }
+
+      // إذا وصل نص جاهز من مولد الذكاء الاصطناعي، عبّي الفورم منه
+      const draft = JSON.parse(localStorage.getItem('ai_draft_letter') || 'null');
+      if (draft){
+        document.getElementById('fSubject').value = draft.subject || '';
+        document.getElementById('fTo').value = draft.to || '';
+        document.getElementById('fBody').value = draft.body || '';
+        localStorage.removeItem('ai_draft_letter');
+        syncPreview();
+      }
+    });
+
+    ['fDate','fTo','fBody'].forEach(id => {
+      document.addEventListener('input', (e) => { if (e.target.id === id) syncPreview(); });
+    });
+
+    function syncPreview(){
+      const dateVal = document.getElementById('fDate').value;
+      document.getElementById('pDate').textContent = dateVal ? new Date(dateVal).toLocaleDateString('ar-IQ') : '—';
+      document.getElementById('pTo').textContent = document.getElementById('fTo').value || '—';
+      document.getElementById('pBody').textContent = document.getElementById('fBody').value || '—';
+    }
+
+    function addAttachmentField(){
+      const wrap = document.getElementById('attachmentFields');
+      const input = document.createElement('input');
+      input.type = 'file'; input.className = 'form-control mb-2 attachment-input';
+      wrap.appendChild(input);
+    }
+
+    function downloadPng(){
+      html2canvas(document.getElementById('printArea'), { scale: 3, backgroundColor: '#fff' }).then(canvas => {
+        const link = document.createElement('a');
+        link.download = 'كتاب_رسمي_' + (document.getElementById('fNumber').value || '') + '.png';
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+      });
+    }
+
+    async function sendLetter(){
+      const subject = document.getElementById('fSubject').value.trim();
+      const to = document.getElementById('fTo').value.trim();
+      const body = document.getElementById('fBody').value.trim();
+      if (!subject || !to || !body) return alert('عبّي الحقول الإلزامية (*) أولاً');
+
+      const files = [...document.querySelectorAll('.attachment-input')].map(i => i.files[0]).filter(Boolean);
+      const attachments = await Promise.all(files.map(uploadAttachment));
+
+      try {
+        await db.collection('outgoing_letters').add({
+          number: document.getElementById('fNumber').value,
+          date: document.getElementById('fDate').value,
+          subject, to, body, attachments,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+          createdBy: CURRENT_USER ? CURRENT_USER.uid : null
+        });
+        alert('تم حفظ الكتاب الرسمي بنجاح');
+        window.location.href = 'outgoing-letters.html';
+      } catch(e){
+        console.error(e);
+        alert('تعذر الحفظ — تحقق من ربط Firestore وصلاحيات القواعد (firestore.rules)');
+      }
+    }
+
+    syncPreview();
+  </script>
+</body>
+</html>

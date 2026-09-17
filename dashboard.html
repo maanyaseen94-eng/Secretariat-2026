@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>الرئيسية</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/css/bootstrap.rtl.min.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-shell">
+    <div id="sidebar-placeholder"></div>
+    <div class="main-content">
+      <div id="topbar-placeholder"></div>
+      <div class="page-body">
+
+        <nav style="font-size:13px; margin-bottom:14px; color:#8a97a3;">
+          <i class="fa-solid fa-house"></i> لوحة التحكم / الرئيسية
+        </nav>
+
+        <div class="welcome-card">
+          <img class="welcome-photo" id="officialPhoto" src="" alt="">
+          <h2 id="welcomeHeading">مرحباً بكم في المكتب</h2>
+          <p>نعمل معاً لخدمة المواطن وبناء مستقبل أفضل</p>
+          <div>
+            <a href="incoming-letters.html" class="btn btn-success me-2"><i class="fa-solid fa-inbox"></i> الكتب الواردة</a>
+            <a href="create-letter.html" class="btn btn-primary"><i class="fa-solid fa-plus"></i> انشاء كتاب رسمي</a>
+          </div>
+        </div>
+
+        <div class="row g-3">
+          <div class="col-md-4">
+            <div class="stat-box bg-purple">
+              <i class="fa-solid fa-chart-line stat-icon"></i>
+              <div>
+                <div class="stat-num" id="statToday">0</div>
+                <div class="stat-label">إحصائيات اليوم (كتاب)</div>
+              </div>
+              <a href="incoming-letters.html">عرض التفاصيل <i class="fa-solid fa-arrow-left"></i></a>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="stat-box bg-gold">
+              <i class="fa-solid fa-file-lines stat-icon"></i>
+              <div>
+                <div class="stat-num" id="statOutgoing">0</div>
+                <div class="stat-label">الكتب الرسمية</div>
+              </div>
+              <a href="outgoing-letters.html">عرض الكل <i class="fa-solid fa-arrow-left"></i></a>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="stat-box bg-green">
+              <i class="fa-solid fa-inbox stat-icon"></i>
+              <div>
+                <div class="stat-num" id="statIncoming">0</div>
+                <div class="stat-label">الكتب الواردة</div>
+              </div>
+              <a href="incoming-letters.html">عرض الكل <i class="fa-solid fa-arrow-left"></i></a>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/js/bootstrap.bundle.min.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  <script src="firebase-config.js"></script>
+  <script src="auth-guard.js"></script>
+  <script src="sidebar.js"></script>
+  <script>
+    renderShell('dashboard', 'الرئيسية');
+
+    AUTH_READY.then(async () => {
+      const cfg = await getOfficeConfig();
+      document.getElementById('welcomeHeading').textContent = "مرحباً بكم في مكتب " + (cfg.officialName || "السيد النائب");
+      if (cfg.photoUrl) document.getElementById('officialPhoto').src = cfg.photoUrl;
+      else document.getElementById('officialPhoto').src = "https://placehold.co/96x96?text=%20";
+
+      // إحصائيات: عدّل حسب المجموعات الفعلية بمشروعك
+      try {
+        const incomingSnap = await db.collection('incoming_letters').get();
+        document.getElementById('statIncoming').textContent = incomingSnap.size;
+        const today = new Date().toISOString().slice(0,10);
+        const todayCount = incomingSnap.docs.filter(d => (d.data().date || '').startsWith(today)).length;
+        document.getElementById('statToday').textContent = todayCount || incomingSnap.size;
+
+        const outgoingSnap = await db.collection('outgoing_letters').get();
+        document.getElementById('statOutgoing').textContent = outgoingSnap.size;
+      } catch (e) {
+        console.warn('لم يتم جلب الإحصائيات (تحقق من ربط Firestore):', e);
+      }
+    });
+  </script>
+</body>
+</html>

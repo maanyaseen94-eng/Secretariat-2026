@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>الاعدادات</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/css/bootstrap.rtl.min.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-shell">
+    <div id="sidebar-placeholder"></div>
+    <div class="main-content">
+      <div id="topbar-placeholder"></div>
+      <div class="page-body">
+        <div class="panel" style="max-width:640px;">
+          <div class="panel-header">تعديل الاعدادات</div>
+          <div class="panel-body">
+            <div class="mb-3">
+              <label class="form-label">اسم المكتب</label>
+              <input type="text" class="form-control" id="fOfficeName">
+            </div>
+            <div class="mb-3">
+              <label class="form-label">اسم النائب (يظهر بترويسة الكتب وشاشة الترحيب)</label>
+              <input type="text" class="form-control" id="fOfficialName">
+            </div>
+            <div class="mb-3">
+              <label class="form-label">رابط صورة النائب (اختياري)</label>
+              <input type="text" class="form-control" id="fPhotoUrl" placeholder="https://...">
+            </div>
+            <div class="mb-3">
+              <label class="form-label">اسم مدير المكتب</label>
+              <input type="text" class="form-control" id="fManagerName">
+            </div>
+            <div class="mb-3">
+              <label class="form-label">صفة مدير المكتب</label>
+              <input type="text" class="form-control" id="fManagerTitle">
+            </div>
+            <div class="mb-3">
+              <label class="form-label">نوع المكتب</label>
+              <select class="form-select" id="fOfficeType">
+                <option value="خاص">خاص</option>
+                <option value="رسمي">رسمي</option>
+              </select>
+            </div>
+            <button class="btn btn-primary" onclick="saveSettings()">تحديث البيانات</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/js/bootstrap.bundle.min.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  <script src="firebase-config.js"></script>
+  <script src="auth-guard.js"></script>
+  <script src="sidebar.js"></script>
+  <script>
+    renderShell('settings', 'الاعدادات');
+
+    AUTH_READY.then(async () => {
+      const cfg = await getOfficeConfig();
+      document.getElementById('fOfficeName').value = cfg.officeName || '';
+      document.getElementById('fOfficialName').value = cfg.officialName || '';
+      document.getElementById('fPhotoUrl').value = cfg.photoUrl || '';
+      document.getElementById('fManagerName').value = cfg.managerName || '';
+      document.getElementById('fManagerTitle').value = cfg.managerTitle || '';
+      document.getElementById('fOfficeType').value = cfg.officeType || 'خاص';
+    });
+
+    async function saveSettings(){
+      const data = {
+        officeName: document.getElementById('fOfficeName').value.trim(),
+        officialName: document.getElementById('fOfficialName').value.trim(),
+        photoUrl: document.getElementById('fPhotoUrl').value.trim(),
+        managerName: document.getElementById('fManagerName').value.trim(),
+        managerTitle: document.getElementById('fManagerTitle').value.trim(),
+        officeType: document.getElementById('fOfficeType').value
+      };
+      try {
+        await db.collection('office').doc('config').set(data, { merge: true });
+        alert('تم تحديث الاعدادات بنجاح');
+      } catch(e){
+        console.error(e);
+        alert('تعذر الحفظ — تحقق من ربط Firestore');
+      }
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>تسجيل الدخول</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+  :root{ --bg:#eef1f4; --card-bg:#fff; --text-main:#2c3e50; --text-sub:#8a97a3; --border:#e3e7eb; --accent:#3f7ae0; --accent-hover:#3568c4; --danger:#e0554a; }
+  *{box-sizing:border-box;}
+  body{ margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center; background:var(--bg); font-family:"Tahoma","Segoe UI",Arial,sans-serif; color:var(--text-main); padding:20px; }
+  .login-card{ width:100%; max-width:340px; background:var(--card-bg); border-radius:14px; box-shadow:0 10px 30px rgba(30,41,59,.08); padding:34px 30px 28px; }
+  .login-header{ text-align:center; margin-bottom:26px; }
+  .login-header h1{ font-size:17px; font-weight:700; margin:0 0 6px; line-height:1.5; }
+  .login-header p{ font-size:12.5px; color:var(--text-sub); margin:0; }
+  .field{ position:relative; margin-bottom:16px; }
+  .field i.icon-left{ position:absolute; top:50%; left:14px; transform:translateY(-50%); color:#b7c0c9; font-size:14px; }
+  .field input{ width:100%; padding:12px 40px 12px 38px; border:1px solid var(--border); border-radius:9px; font-size:13.5px; background:#fafbfc; outline:none; transition:border-color .15s, background .15s; font-family:inherit; }
+  .field input:focus{ border-color:var(--accent); background:#fff; }
+  .toggle-pass{ position:absolute; top:50%; left:14px; transform:translateY(-50%); color:#b7c0c9; font-size:14px; cursor:pointer; background:none; border:none; padding:0; }
+  .remember-row{ display:flex; align-items:center; gap:8px; margin:2px 0 20px; font-size:13px; }
+  .remember-row input[type=checkbox]{ width:15px; height:15px; accent-color:var(--accent); cursor:pointer; }
+  .remember-row label{ cursor:pointer; user-select:none; }
+  .error-msg{ display:none; background:#fdecea; color:var(--danger); border:1px solid #f6c8c3; border-radius:8px; padding:9px 12px; font-size:12.5px; margin-bottom:16px; text-align:center; }
+  .btn-login{ width:100%; background:var(--accent); color:#fff; border:none; border-radius:9px; padding:12px; font-size:14px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; font-family:inherit; transition:background .15s; }
+  .btn-login:hover{ background:var(--accent-hover); }
+  .btn-login:disabled{ opacity:.65; cursor:not-allowed; }
+  .btn-login .fa-spinner{ display:none; }
+  .btn-login.loading .fa-spinner{ display:inline-block; }
+  .btn-login.loading .fa-right-to-bracket{ display:none; }
+</style>
+</head>
+<body>
+
+  <div class="login-card">
+    <div class="login-header">
+      <h1 id="officeTitle">مكتب السيد النائب</h1>
+      <p>يرجى تسجيل الدخول للمتابعة</p>
+    </div>
+
+    <div class="error-msg" id="errorMsg"></div>
+
+    <form id="loginForm">
+      <div class="field">
+        <i class="icon-left fa-regular fa-envelope"></i>
+        <input type="text" id="username" placeholder="إسم المستخدم / البريد الإلكتروني" autocomplete="username" required>
+      </div>
+
+      <div class="field">
+        <button type="button" class="toggle-pass" id="togglePass" aria-label="إظهار كلمة المرور">
+          <i class="fa-regular fa-eye"></i>
+        </button>
+        <input type="password" id="password" placeholder="كلمة المرور" autocomplete="current-password" required>
+      </div>
+
+      <div class="remember-row">
+        <input type="checkbox" id="remember">
+        <label for="remember">تذكرني</label>
+      </div>
+
+      <button type="submit" class="btn-login" id="loginBtn">
+        <i class="fa-solid fa-spinner fa-spin"></i>
+        <i class="fa-solid fa-right-to-bracket"></i>
+        <span>تسجيل الدخول</span>
+      </button>
+    </form>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  <script src="firebase-config.js"></script>
+  <script>
+    const REDIRECT_URL = "dashboard.html";
+
+    // عنوان تسجيل الدخول ياخذ اسم المكتب من الاعدادات المحفوظة إن وجدت
+    getOfficeConfig().then(cfg => {
+      document.getElementById('officeTitle').textContent = "مكتب " + (cfg.officialName || "السيد النائب");
+    });
+
+    // اذا مسجل دخوله مسبقاً حوله على طول
+    auth.onAuthStateChanged(user => { if (user) window.location.href = REDIRECT_URL; });
+
+    const form = document.getElementById('loginForm');
+    const usernameInput = document.getElementById('username');
+    const passwordInput = document.getElementById('password');
+    const rememberInput = document.getElementById('remember');
+    const loginBtn = document.getElementById('loginBtn');
+    const errorMsg = document.getElementById('errorMsg');
+    const togglePass = document.getElementById('togglePass');
+
+    togglePass.addEventListener('click', () => {
+      const isPass = passwordInput.type === 'password';
+      passwordInput.type = isPass ? 'text' : 'password';
+      togglePass.innerHTML = isPass ? '<i class="fa-regular fa-eye-slash"></i>' : '<i class="fa-regular fa-eye"></i>';
+    });
+
+    function showError(msg){ errorMsg.textContent = msg; errorMsg.style.display = 'block'; }
+    function hideError(){ errorMsg.style.display = 'none'; }
+
+    function mapFirebaseError(code){
+      switch(code){
+        case 'auth/invalid-email': return 'صيغة البريد الإلكتروني غير صحيحة';
+        case 'auth/user-not-found':
+        case 'auth/wrong-password':
+        case 'auth/invalid-credential': return 'إسم المستخدم أو كلمة المرور غير صحيحة';
+        case 'auth/too-many-requests': return 'محاولات كثيرة، حاول لاحقاً';
+        case 'auth/network-request-failed': return 'تحقق من الاتصال بالإنترنت';
+        default: return 'حدث خطأ أثناء تسجيل الدخول';
+      }
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      hideError();
+      const identifier = usernameInput.value.trim();
+      const password = passwordInput.value;
+      if(!identifier || !password) return;
+
+      // إذا إسم المستخدم مو إيميل، عدله حسب نظامك (مثال: username@yourdomain.com)
+      const email = identifier.includes('@') && identifier.includes('.') ? identifier : `${identifier}@yourdomain.com`;
+
+      loginBtn.disabled = true;
+      loginBtn.classList.add('loading');
+      try {
+        const persistence = rememberInput.checked ? firebase.auth.Auth.Persistence.LOCAL : firebase.auth.Auth.Persistence.SESSION;
+        await auth.setPersistence(persistence);
+        await auth.signInWithEmailAndPassword(email, password);
+        window.location.href = REDIRECT_URL;
+      } catch (err) {
+        showError(mapFirebaseError(err.code));
+      } finally {
+        loginBtn.disabled = false;
+        loginBtn.classList.remove('loading');
+      }
+    });
+  </script>
+</body>
+</html>

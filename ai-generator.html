@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>مولد الذكاء الاصطناعي</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/css/bootstrap.rtl.min.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-shell">
+    <div id="sidebar-placeholder"></div>
+    <div class="main-content">
+      <div id="topbar-placeholder"></div>
+      <div class="page-body">
+
+        <div class="row g-3">
+          <div class="col-lg-7">
+            <div class="panel mb-3">
+              <div class="panel-header"><i class="fa-solid fa-wand-magic-sparkles"></i> صياغة كتاب رسمي بالذكاء الاصطناعي</div>
+              <div class="panel-body">
+
+                <div class="mb-3">
+                  <label class="form-label">إرفاق كتاب/مراسلة واردة (صورة أو PDF) لاستخراج التفاصيل منها — اختياري</label>
+                  <input type="file" class="form-control" id="sourceFile" accept="image/*,.pdf">
+                </div>
+
+                <div class="mb-3">
+                  <label class="form-label">الجهة المرسل إليها</label>
+                  <select class="form-select" id="entitySelect">
+                    <option value="">— اختر جهة أو اكتب جديدة —</option>
+                  </select>
+                </div>
+
+                <div class="mb-3">
+                  <label class="form-label">النقاط / التعليمات الأساسية للكتاب *</label>
+                  <textarea class="form-control" id="instructions" rows="5" placeholder="مثال: الرد على كتاب وزارة التربية رقم 123 بخصوص تخفيض الأجور الدراسية، بالموافقة على الطلب مع تحديد المستندات المطلوبة"></textarea>
+                </div>
+
+                <button class="btn btn-primary" onclick="generateDraft()" id="genBtn">
+                  <i class="fa-solid fa-wand-magic-sparkles"></i> توليد الكتاب
+                </button>
+                <div class="form-text mt-2">
+                  يستدعي هذا الزر دالة سيرفرلس مربوطة بـ Claude API (شوف <code>APP_CONFIG.AI_ENDPOINT</code> بملف <code>firebase-config.js</code>، ومثال جاهز للنشر بملف <code>api/generate-letter.js</code>).
+                </div>
+              </div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-header d-flex justify-content-between align-items-center">
+                <span>قوالب التحية حسب الجهة</span>
+                <button class="btn btn-sm btn-light" onclick="addTemplate()"><i class="fa-solid fa-plus"></i> إضافة قالب</button>
+              </div>
+              <div class="panel-body">
+                <table class="table table-sm">
+                  <thead><tr><th>الجهة</th><th>نص التحية</th><th></th></tr></thead>
+                  <tbody id="templatesBody">
+                    <tr><td colspan="3" class="text-muted text-center">لا توجد قوالب محفوظة بعد</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-lg-5">
+            <div class="panel">
+              <div class="panel-header">النص المُولّد</div>
+              <div class="panel-body">
+                <div class="mb-2">
+                  <label class="form-label">عنوان الكتاب</label>
+                  <input type="text" class="form-control" id="draftSubject">
+                </div>
+                <div class="mb-2">
+                  <label class="form-label">الى</label>
+                  <input type="text" class="form-control" id="draftTo">
+                </div>
+                <div class="mb-2">
+                  <label class="form-label">نص الكتاب</label>
+                  <textarea class="form-control" id="draftBody" rows="14" placeholder="سيظهر هنا النص المُولّد من الذكاء الاصطناعي، وتقدر تعدله قبل الاستخدام"></textarea>
+                </div>
+                <div class="d-flex gap-2">
+                  <button class="btn btn-outline-secondary btn-sm" onclick="copyDraft()"><i class="fa-solid fa-copy"></i> نسخ</button>
+                  <button class="btn btn-success btn-sm" onclick="useInNewLetter()"><i class="fa-solid fa-arrow-left"></i> استخدام في كتاب رسمي جديد</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/js/bootstrap.bundle.min.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  <script src="firebase-config.js"></script>
+  <script src="auth-guard.js"></script>
+  <script src="sidebar.js"></script>
+  <script>
+    renderShell('ai', 'مولد الذكاء الاصطناعي');
+
+    AUTH_READY.then(loadTemplates);
+
+    async function loadTemplates(){
+      const body = document.getElementById('templatesBody');
+      const select = document.getElementById('entitySelect');
+      try {
+        const snap = await db.collection('ai_templates').get();
+        if (!snap.size){ return; }
+        body.innerHTML = '';
+        select.innerHTML = '<option value="">— اختر جهة أو اكتب جديدة —</option>';
+        snap.docs.forEach(d => {
+          const t = d.data();
+          body.insertAdjacentHTML('beforeend', `
+            <tr>
+              <td>${t.entity}</td><td>${t.greeting}</td>
+              <td><button class="btn btn-sm btn-outline-danger" onclick="deleteTemplate('${d.id}')"><i class="fa-solid fa-trash"></i></button></td>
+            </tr>`);
+          select.insertAdjacentHTML('beforeend', `<option value="${t.entity}">${t.entity}</option>`);
+        });
+      } catch(e){ console.warn('تعذر جلب قوالب التحية:', e); }
+    }
+
+    async function addTemplate(){
+      const entity = prompt('اسم الجهة (مثال: وزارة التربية)');
+      if (!entity) return;
+      const greeting = prompt('نص التحية الافتتاحية لهذه الجهة');
+      if (!greeting) return;
+      await db.collection('ai_templates').add({ entity, greeting });
+      loadTemplates();
+    }
+    async function deleteTemplate(id){
+      if (!confirm('حذف هذا القالب؟')) return;
+      await db.collection('ai_templates').doc(id).delete();
+      loadTemplates();
+    }
+
+    async function generateDraft(){
+      const instructions = document.getElementById('instructions').value.trim();
+      if (!instructions) return alert('اكتب النقاط الأساسية للكتاب أولاً');
+
+      const btn = document.getElementById('genBtn');
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جارِ التوليد...';
+
+      const file = document.getElementById('sourceFile').files[0];
+      const entity = document.getElementById('entitySelect').value;
+
+      try {
+        const formData = new FormData();
+        formData.append('instructions', instructions);
+        formData.append('entity', entity);
+        if (file) formData.append('file', file);
+
+        const res = await fetch(APP_CONFIG.AI_ENDPOINT, { method: 'POST', body: formData });
+        if (!res.ok) throw new Error('فشل الاتصال بخدمة التوليد');
+        const data = await res.json();
+
+        document.getElementById('draftSubject').value = data.subject || '';
+        document.getElementById('draftTo').value = data.to || entity || '';
+        document.getElementById('draftBody').value = data.body || '';
+      } catch(e){
+        console.error(e);
+        alert('تعذر توليد الكتاب — تأكد من نشر دالة الذكاء الاصطناعي (api/generate-letter.js) وربط رابطها بـ APP_CONFIG.AI_ENDPOINT');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> توليد الكتاب';
+      }
+    }
+
+    function copyDraft(){
+      navigator.clipboard.writeText(document.getElementById('draftBody').value);
+      alert('تم نسخ النص');
+    }
+
+    function useInNewLetter(){
+      const draft = {
+        subject: document.getElementById('draftSubject').value,
+        to: document.getElementById('draftTo').value,
+        body: document.getElementById('draftBody').value
+      };
+      if (!draft.body) return alert('ولّد نص أولاً قبل الاستخدام');
+      localStorage.setItem('ai_draft_letter', JSON.stringify(draft));
+      window.location.href = 'create-letter.html';
+    }
+  </script>
+</body>
+</html>
