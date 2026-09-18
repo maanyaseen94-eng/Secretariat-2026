@@ -69,7 +69,7 @@
             </div>
             <div class="letter-to">الى / ${letter.to || letter.senderEntity || '—'} المحترم</div>
             <div class="letter-body-text">${letter.body || letter.subject || '—'}</div>
-            <div class="letter-stamp">ختم<br>المكتب</div>
+            <div class="letter-stamp" ${letter.createdBySignatureUrl ? 'style="border:none;"' : ''}>${letter.createdBySignatureUrl ? `<img src="${letter.createdBySignatureUrl}" alt="توقيع" style="width:100%;height:100%;object-fit:contain;">` : 'ختم<br>المكتب'}</div>
             <div class="letter-signature">${letter.createdByName ? (letter.createdByName + (letter.createdByTitle ? ' - ' + letter.createdByTitle : '')) : (cfg.managerName || cfg.officeName || '')}</div>
             <div class="letter-footer-pattern"></div>
           </div>

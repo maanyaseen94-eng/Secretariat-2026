@@ -54,6 +54,15 @@
                 <textarea class="form-control" id="fRecipients" rows="3" placeholder="مثال:&#10;ارشد علي فاضل - مدير إدارة سكرتارية البصرة&#10;عمر عادل معلا - مدير إدارة سكرتارية بغداد"></textarea>
                 <div class="form-text">جهة وحدة بس = حقل "الى" يتعبى تلقائياً بيها ويصير مقفل. أكثر من جهة = يظهر للموظف قائمة اختيار يحدد منها الجهة عند انشاء كل كتاب.</div>
               </div>
+              <div class="col-md-6">
+                <label class="form-label">رابط صورة التوقيع / الختم (اختياري)</label>
+                <input type="text" class="form-control" id="fSignatureUrl" placeholder="مثال: signatures/ali-talib.png">
+                <div class="form-text">
+                  ارفع صورة التوقيع (خلفية شفافة PNG أفضل) لمجلد <code>signatures</code> بمستودع GitHub تبع المشروع،
+                  وحط هنا اسم الملف بنفس الشكل. تظهر هذي الصورة مكان دائرة "ختم المكتب" بأي كتاب يسويه هذا الموظف،
+                  بدل الدائرة الفارغة.
+                </div>
+              </div>
               <div class="col-12" id="permsBox">
                 <label class="form-label d-block">صلاحيات الموظف</label>
                 <div class="form-check form-check-inline">
@@ -129,6 +138,7 @@
       document.getElementById('fRole').value = 'staff';
       document.getElementById('fTitle').value = '';
       document.getElementById('fRecipients').value = '';
+      document.getElementById('fSignatureUrl').value = '';
       document.getElementById('pSettings').checked = false;
       document.getElementById('pDeleteArchive').checked = false;
       document.getElementById('pAi').checked = false;
@@ -143,6 +153,7 @@
       document.getElementById('fTitle').value = data.title || '';
       const existingRecipients = (data.recipients && data.recipients.length) ? data.recipients : (data.defaultRecipient ? [data.defaultRecipient] : []);
       document.getElementById('fRecipients').value = existingRecipients.join('\n');
+      document.getElementById('fSignatureUrl').value = data.signatureUrl || '';
       const p = data.permissions || {};
       document.getElementById('pSettings').checked = !!p.settings;
       document.getElementById('pDeleteArchive').checked = !!p.deleteArchive;
@@ -166,6 +177,7 @@
         role,
         title: document.getElementById('fTitle').value.trim(),
         recipients,
+        signatureUrl: document.getElementById('fSignatureUrl').value.trim(),
         permissions: {
           settings: document.getElementById('pSettings').checked,
           deleteArchive: document.getElementById('pDeleteArchive').checked,
@@ -209,7 +221,7 @@
           const recipientsText = recipientsList.length ? recipientsList.join('<br>') : '—';
           return `
             <tr>
-              <td>${u.name || '—'}<div class="text-muted" style="font-size:11.5px;">${u.email || ''}</div></td>
+              <td>${u.name || '—'} ${u.signatureUrl ? '<i class="fa-solid fa-signature text-success" title="عنده صورة توقيع"></i>' : ''}<div class="text-muted" style="font-size:11.5px;">${u.email || ''}</div></td>
               <td>${u.title || '—'}</td>
               <td>${isAdmin ? '<span class="badge bg-purple">مدير</span>' : '<span class="badge bg-secondary">موظف</span>'}</td>
               <td style="font-size:12.5px;">${permsText}</td>
