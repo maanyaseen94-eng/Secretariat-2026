@@ -64,24 +64,30 @@
               <div class="col-lg-6">
                 <div class="letter-preview-wrap">
                   <div class="letter-page" id="printArea">
+                    <div class="bismillah">بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</div>
                     <div class="letter-header">
-                      <div class="emblem" id="emblemBox">شعار<br>المكتب</div>
-                      <div class="ar">
-                        جمهورية العراق<br>
-                        مجلس النواب<br>
-                        مكتب النائب <span id="pOfficialName">[الاسم]</span><br>
-                        السكرتارية
-                      </div>
                       <div class="en">
                         Republic Of Iraq<br>
-                        Council Of Representatives<br>
+                        Council of Representative<br>
                         Office of Representative<br>
-                        Secretariat
+                        <span id="pOfficialNameEn">[Name]</span>
+                        <div class="brand" id="pOfficeNameEn">secretariat</div>
+                      </div>
+                      <div class="emblem-col">
+                        <img src="office-emblem.png" alt="شعار مجلس النواب">
+                        <div class="memo-label">(( مذكرة داخلية ))</div>
+                      </div>
+                      <div class="ar">
+                        جمهورية العراق<br>
+                        مجلس النواب العراقي<br>
+                        مكتب النائب<br>
+                        <span id="pOfficialName">[الاسم]</span>
+                        <div class="brand" id="pOfficeName">سكرتارية النائب</div>
                       </div>
                     </div>
                     <div class="letter-meta">
-                      <span>العدد / <span id="pNumber">١</span></span>
-                      <span>التاريخ / <span id="pDate">—</span></span>
+                      <div>العدد : <span id="pNumber">١</span></div>
+                      <div>التأريخ : <span id="pDate">—</span></div>
                     </div>
                     <div class="letter-to">
                       الى / <span id="pTo">—</span> المحترم
@@ -125,6 +131,9 @@
       const { profile } = await PERMS_READY;
 
       document.getElementById('pOfficialName').textContent = OFFICE_CFG.officialName || '[الاسم]';
+      document.getElementById('pOfficeName').textContent = OFFICE_CFG.officeName || 'سكرتارية النائب';
+      document.getElementById('pOfficialNameEn').textContent = OFFICE_CFG.officialNameEn || 'Oudi A. Hussien';
+      document.getElementById('pOfficeNameEn').textContent = OFFICE_CFG.officeNameEn || 'secretariat';
       document.getElementById('fRecipientLabel').textContent = OFFICE_CFG.officialName || 'النائب';
 
       // توقيع الكتاب: اسم ومنصب الموظف اللي أنشأه إذا محدد له منصب، وإلا مدير المكتب العام

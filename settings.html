@@ -28,6 +28,14 @@
               <input type="text" class="form-control" id="fOfficialName">
             </div>
             <div class="mb-3">
+              <label class="form-label">اسم النائب بالإنكليزي (يظهر بترويسة الكتب — الجهة اليسار)</label>
+              <input type="text" class="form-control" id="fOfficialNameEn" placeholder="مثال: Oudi A. Hussien">
+            </div>
+            <div class="mb-3">
+              <label class="form-label">اسم السكرتارية بالإنكليزي (يظهر بترويسة الكتب — الجهة اليسار)</label>
+              <input type="text" class="form-control" id="fOfficeNameEn" placeholder="مثال: secretariat">
+            </div>
+            <div class="mb-3">
               <label class="form-label">رابط صورة النائب (اختياري)</label>
               <input type="text" class="form-control" id="fPhotoUrl" placeholder="https://...">
             </div>
@@ -68,6 +76,8 @@
       const cfg = await getOfficeConfig();
       document.getElementById('fOfficeName').value = cfg.officeName || '';
       document.getElementById('fOfficialName').value = cfg.officialName || '';
+      document.getElementById('fOfficialNameEn').value = cfg.officialNameEn || '';
+      document.getElementById('fOfficeNameEn').value = cfg.officeNameEn || '';
       document.getElementById('fPhotoUrl').value = cfg.photoUrl || '';
       document.getElementById('fManagerName').value = cfg.managerName || '';
       document.getElementById('fManagerTitle').value = cfg.managerTitle || '';
@@ -78,6 +88,8 @@
       const data = {
         officeName: document.getElementById('fOfficeName').value.trim(),
         officialName: document.getElementById('fOfficialName').value.trim(),
+        officialNameEn: document.getElementById('fOfficialNameEn').value.trim(),
+        officeNameEn: document.getElementById('fOfficeNameEn').value.trim(),
         photoUrl: document.getElementById('fPhotoUrl').value.trim(),
         managerName: document.getElementById('fManagerName').value.trim(),
         managerTitle: document.getElementById('fManagerTitle').value.trim(),

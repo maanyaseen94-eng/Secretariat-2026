@@ -58,14 +58,30 @@
       content.innerHTML = `
         <div class="letter-preview-wrap">
           <div class="letter-page" id="printArea">
+            <div class="bismillah">بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</div>
             <div class="letter-header">
-              <div class="emblem">شعار<br>المكتب</div>
-              <div class="ar">جمهورية العراق<br>مجلس النواب<br>مكتب النائب ${cfg.officialName || ''}<br>السكرتارية</div>
-              <div class="en">Republic Of Iraq<br>Council Of Representatives<br>Office of Representative<br>Secretariat</div>
+              <div class="en">
+                Republic Of Iraq<br>
+                Council of Representative<br>
+                Office of Representative<br>
+                ${cfg.officialNameEn || 'Oudi A. Hussien'}
+                <div class="brand">${cfg.officeNameEn || 'secretariat'}</div>
+              </div>
+              <div class="emblem-col">
+                <img src="office-emblem.png" alt="شعار مجلس النواب">
+                <div class="memo-label">(( مذكرة داخلية ))</div>
+              </div>
+              <div class="ar">
+                جمهورية العراق<br>
+                مجلس النواب العراقي<br>
+                مكتب النائب<br>
+                ${cfg.officialName || ''}
+                <div class="brand">${cfg.officeName || 'سكرتارية النائب'}</div>
+              </div>
             </div>
             <div class="letter-meta">
-              <span>العدد / ${letter.number || '—'}</span>
-              <span>التاريخ / ${letter.date || '—'}</span>
+              <div>العدد : ${letter.number || '—'}</div>
+              <div>التأريخ : ${letter.date || '—'}</div>
             </div>
             <div class="letter-to">الى / ${letter.to || letter.senderEntity || '—'} المحترم</div>
             <div class="letter-body-text">${letter.body || letter.subject || '—'}</div>
