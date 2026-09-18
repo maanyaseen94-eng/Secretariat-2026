@@ -155,25 +155,22 @@ body{
   text-align:right;
   overflow:hidden;
 }
-.bismillah{ text-align:center; font-size:14px; font-weight:600; color:#111; margin-bottom:8px; }
-.letter-header{ display:flex; align-items:flex-start; justify-content:space-between; gap:8px; border-bottom:3px solid #1a1a1a; padding-bottom:10px; margin-bottom:6px; }
-.letter-header .emblem-col{ flex:0 0 auto; text-align:center; }
-.letter-header .emblem-col img{ width:70px; height:auto; display:block; margin:0 auto; }
-.letter-header .emblem-col .memo-label{ font-size:9.5px; margin-top:4px; white-space:nowrap; color:#222; }
-.letter-header .ar{ flex:1; text-align:right; font-size:10.5px; line-height:1.55; }
-.letter-header .ar .brand{ font-weight:700; font-size:14px; margin-top:3px; color:#111; }
-.letter-header .en{ flex:1; text-align:left; font-size:8.5px; color:#333; line-height:1.5; direction:ltr; }
-.letter-header .en .brand{ font-weight:700; font-size:12px; margin-top:5px; color:#111; }
-.letter-meta{ font-size:11px; line-height:1.9; margin-bottom:12px; }
-.letter-meta div{ margin-bottom:1px; }
-.letter-to{ font-size:12px; margin-bottom:14px; }
-.letter-body-text{ font-size:12px; line-height:1.9; white-space:pre-wrap; min-height:120px; }
-.letter-stamp{
-  width:80px; height:80px; border-radius:50%; border:2px dashed #c3cad3;
-  display:flex; align-items:center; justify-content:center; font-size:9px; color:var(--text-sub);
-  position:absolute; bottom:15%; left:8%; text-align:center;
+.letterhead-img{ display:block; width:100%; height:auto; margin-bottom:8px; }
+.letter-meta{ font-size:11px; line-height:1.9; margin-bottom:12px; text-align:left; direction:ltr; }
+.letter-meta div{ margin-bottom:1px; direction:rtl; }
+.letter-to{ font-size:12px; margin-bottom:10px; text-align:right; }
+.letter-subject{ font-size:12px; font-weight:700; margin-bottom:14px; text-align:center; }
+.letter-body-text{ font-size:12px; line-height:1.9; white-space:pre-wrap; min-height:110px; }
+.signature-block{
+  position:absolute; bottom:9%; left:8%; text-align:center; font-size:11px;
 }
-.letter-signature{ position:absolute; bottom:9%; right:8%; font-size:11px; text-align:center; }
+.signature-block .sig-img-wrap{
+  width:80px; height:60px; border-radius:6px; border:2px dashed #c3cad3;
+  display:flex; align-items:center; justify-content:center; font-size:9px; color:var(--text-sub);
+  margin:0 auto 4px; text-align:center; overflow:hidden;
+}
+.signature-block .sig-name{ font-weight:700; }
+.signature-block .sig-title{ font-size:10px; color:var(--text-sub); }
 .letter-footer-pattern{
   position:absolute; bottom:0; right:0; left:0; height:14px;
   background-image:repeating-linear-gradient(45deg,#c9a86a 0 4px,transparent 4px 8px);

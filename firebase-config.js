@@ -28,9 +28,7 @@ const APP_CONFIG = {
 
 const DEFAULT_OFFICE = {
   officialName: "عدي عواد الحسين",
-  officialNameEn: "Oudi A. Hussien",
   officeName: "سكرتارية النائب",
-  officeNameEn: "secretariat",
   managerName: "",
   managerTitle: "سكرتير النائب",
   officeType: "خاص",

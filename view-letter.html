@@ -58,35 +58,19 @@
       content.innerHTML = `
         <div class="letter-preview-wrap">
           <div class="letter-page" id="printArea">
-            <div class="bismillah">بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</div>
-            <div class="letter-header">
-              <div class="en">
-                Republic Of Iraq<br>
-                Council of Representative<br>
-                Office of Representative<br>
-                ${cfg.officialNameEn || 'Oudi A. Hussien'}
-                <div class="brand">${cfg.officeNameEn || 'secretariat'}</div>
-              </div>
-              <div class="emblem-col">
-                <img src="office-emblem.png" alt="شعار مجلس النواب">
-                <div class="memo-label">(( مذكرة داخلية ))</div>
-              </div>
-              <div class="ar">
-                جمهورية العراق<br>
-                مجلس النواب العراقي<br>
-                مكتب النائب<br>
-                ${cfg.officialName || ''}
-                <div class="brand">${cfg.officeName || 'سكرتارية النائب'}</div>
-              </div>
-            </div>
+            <img class="letterhead-img" src="letterhead.png" alt="ترويسة سكرتارية النائب">
             <div class="letter-meta">
               <div>العدد : ${letter.number || '—'}</div>
               <div>التأريخ : ${letter.date || '—'}</div>
             </div>
             <div class="letter-to">الى / ${letter.to || letter.senderEntity || '—'} المحترم</div>
+            ${letter.body ? `<div class="letter-subject">م / ${letter.subject || '—'}</div>` : ''}
             <div class="letter-body-text">${letter.body || letter.subject || '—'}</div>
-            <div class="letter-stamp" ${letter.createdBySignatureUrl ? 'style="border:none;"' : ''}>${letter.createdBySignatureUrl ? `<img src="${letter.createdBySignatureUrl}" alt="توقيع" style="width:100%;height:100%;object-fit:contain;">` : 'ختم<br>المكتب'}</div>
-            <div class="letter-signature">${letter.createdByName ? (letter.createdByName + (letter.createdByTitle ? ' - ' + letter.createdByTitle : '')) : (cfg.managerName || cfg.officeName || '')}</div>
+            <div class="signature-block">
+              <div class="sig-img-wrap">${letter.createdBySignatureUrl ? `<img src="${letter.createdBySignatureUrl}" alt="توقيع" style="width:100%;height:100%;object-fit:contain;">` : 'ختم<br>المكتب'}</div>
+              <div class="sig-name">${letter.createdByName || cfg.managerName || cfg.officeName || ''}</div>
+              <div class="sig-title">${letter.createdByTitle || ''}</div>
+            </div>
             <div class="letter-footer-pattern"></div>
           </div>
         </div>
