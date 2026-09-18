@@ -50,9 +50,9 @@
                 <input type="text" class="form-control" id="fTitle" placeholder="مثال: إداري الأتمتة">
               </div>
               <div class="col-md-6">
-                <label class="form-label">الجهة المستلمة الثابتة (اختياري)</label>
-                <input type="text" class="form-control" id="fDefaultRecipient" placeholder="مثال: ارشد علي فاضل - مدير إدارة سكرتارية البصرة">
-                <div class="form-text">إذا حطيت قيمة هنا، حقل "الى" بصفحة انشاء كتاب رسمي يتعبى تلقائياً بيها ويصير مقفل وغير قابل للتغيير من الموظف.</div>
+                <label class="form-label">الجهات المستلمة المسموحة (اختياري — سطر لكل جهة)</label>
+                <textarea class="form-control" id="fRecipients" rows="3" placeholder="مثال:&#10;ارشد علي فاضل - مدير إدارة سكرتارية البصرة&#10;عمر عادل معلا - مدير إدارة سكرتارية بغداد"></textarea>
+                <div class="form-text">جهة وحدة بس = حقل "الى" يتعبى تلقائياً بيها ويصير مقفل. أكثر من جهة = يظهر للموظف قائمة اختيار يحدد منها الجهة عند انشاء كل كتاب.</div>
               </div>
               <div class="col-12" id="permsBox">
                 <label class="form-label d-block">صلاحيات الموظف</label>
@@ -84,7 +84,7 @@
               <table class="table table-hover align-middle">
                 <thead>
                   <tr>
-                    <th>الاسم</th><th>المنصب</th><th>الدور</th><th>الصلاحيات</th><th>الجهة المستلمة الثابتة</th><th>خيارات</th>
+                    <th>الاسم</th><th>المنصب</th><th>الدور</th><th>الصلاحيات</th><th>الجهات المستلمة المسموحة</th><th>خيارات</th>
                   </tr>
                 </thead>
                 <tbody id="usersBody">
@@ -128,7 +128,7 @@
       document.getElementById('fUid').value = '';
       document.getElementById('fRole').value = 'staff';
       document.getElementById('fTitle').value = '';
-      document.getElementById('fDefaultRecipient').value = '';
+      document.getElementById('fRecipients').value = '';
       document.getElementById('pSettings').checked = false;
       document.getElementById('pDeleteArchive').checked = false;
       document.getElementById('pAi').checked = false;
@@ -141,7 +141,8 @@
       document.getElementById('fUid').value = uid;
       document.getElementById('fRole').value = data.role === 'admin' ? 'admin' : 'staff';
       document.getElementById('fTitle').value = data.title || '';
-      document.getElementById('fDefaultRecipient').value = data.defaultRecipient || '';
+      const existingRecipients = (data.recipients && data.recipients.length) ? data.recipients : (data.defaultRecipient ? [data.defaultRecipient] : []);
+      document.getElementById('fRecipients').value = existingRecipients.join('\n');
       const p = data.permissions || {};
       document.getElementById('pSettings').checked = !!p.settings;
       document.getElementById('pDeleteArchive').checked = !!p.deleteArchive;
@@ -157,12 +158,14 @@
       if (!name) return alert('اكتب اسم الموظف');
 
       const role = document.getElementById('fRole').value;
+      const recipients = document.getElementById('fRecipients').value
+        .split('\n').map(s => s.trim()).filter(Boolean);
       const data = {
         name,
         email: document.getElementById('fEmail').value.trim(),
         role,
         title: document.getElementById('fTitle').value.trim(),
-        defaultRecipient: document.getElementById('fDefaultRecipient').value.trim(),
+        recipients,
         permissions: {
           settings: document.getElementById('pSettings').checked,
           deleteArchive: document.getElementById('pDeleteArchive').checked,
@@ -202,13 +205,15 @@
             u.permissions?.deleteArchive ? 'حذف/أرشفة' : null,
             u.permissions?.aiGenerator ? 'الذكاء الاصطناعي' : null,
           ].filter(Boolean).join('، ') || '— بدون صلاحيات إضافية —';
+          const recipientsList = (u.recipients && u.recipients.length) ? u.recipients : (u.defaultRecipient ? [u.defaultRecipient] : []);
+          const recipientsText = recipientsList.length ? recipientsList.join('<br>') : '—';
           return `
             <tr>
               <td>${u.name || '—'}<div class="text-muted" style="font-size:11.5px;">${u.email || ''}</div></td>
               <td>${u.title || '—'}</td>
               <td>${isAdmin ? '<span class="badge bg-purple">مدير</span>' : '<span class="badge bg-secondary">موظف</span>'}</td>
               <td style="font-size:12.5px;">${permsText}</td>
-              <td style="font-size:12.5px;">${u.defaultRecipient || '—'}</td>
+              <td style="font-size:12.5px;">${recipientsText}</td>
               <td>
                 <button class="btn btn-outline-primary btn-sm" onclick='editUser(${JSON.stringify(d.id)}, ${JSON.stringify(u)})'><i class="fa-solid fa-pen"></i> تعديل</button>
                 <button class="btn btn-outline-danger btn-sm" onclick="deleteUser('${d.id}')"><i class="fa-solid fa-trash"></i> حذف</button>

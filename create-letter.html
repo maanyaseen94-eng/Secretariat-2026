@@ -132,13 +132,12 @@
         ? (profile.name || '') + ' - ' + profile.title
         : (OFFICE_CFG.managerName || OFFICE_CFG.officeName || '—');
 
-      // إذا الموظف إله جهة مستلمة ثابتة محددة من صفحة إدارة المستخدمين، نعبي حقل "الى" ونقفله
-      if (profile && profile.defaultRecipient) {
-        const toInput = document.getElementById('fTo');
-        toInput.value = profile.defaultRecipient;
-        toInput.readOnly = true;
-        toInput.classList.add('bg-light');
-      }
+      // إذا الموظف إله جهة/جهات مستلمة محددة من صفحة إدارة المستخدمين، نقيّد حقل "الى" بيها
+      // (recipients = قائمة جديدة تدعم أكثر من جهة، defaultRecipient = الصيغة القديمة لجهة وحدة فقط)
+      const allowedRecipients = (profile && profile.recipients && profile.recipients.length)
+        ? profile.recipients
+        : (profile && profile.defaultRecipient ? [profile.defaultRecipient] : []);
+      const recipientLocked = lockRecipientField(allowedRecipients);
 
       document.getElementById('fDate').value = new Date().toISOString().slice(0,10);
       syncPreview();
@@ -154,12 +153,33 @@
       const draft = JSON.parse(localStorage.getItem('ai_draft_letter') || 'null');
       if (draft){
         document.getElementById('fSubject').value = draft.subject || '';
-        document.getElementById('fTo').value = draft.to || '';
+        if (!recipientLocked) document.getElementById('fTo').value = draft.to || '';
         document.getElementById('fBody').value = draft.body || '';
         localStorage.removeItem('ai_draft_letter');
         syncPreview();
       }
     });
+
+    // تقيّد حقل "الى": جهة وحدة = يتعبى وينقفل، أكثر من جهة = يتحول لقائمة اختيار. ترجع true إذا صار تقييد
+    function lockRecipientField(list){
+      if (!list || !list.length) return false;
+      const old = document.getElementById('fTo');
+      if (list.length === 1){
+        old.value = list[0];
+        old.readOnly = true;
+        old.classList.add('bg-light');
+      } else {
+        const select = document.createElement('select');
+        select.id = 'fTo';
+        select.className = 'form-select';
+        select.required = true;
+        select.innerHTML = '<option value="">— اختر الجهة المستلمة —</option>' +
+          list.map(r => `<option value="${r}">${r}</option>`).join('');
+        select.addEventListener('change', syncPreview);
+        old.parentNode.replaceChild(select, old);
+      }
+      return true;
+    }
 
     ['fDate','fTo','fBody'].forEach(id => {
       document.addEventListener('input', (e) => { if (e.target.id === id) syncPreview(); });
