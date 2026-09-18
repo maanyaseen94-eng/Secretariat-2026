@@ -62,6 +62,7 @@
   <script src="sidebar.js"></script>
   <script>
     renderShell('settings', 'الاعدادات');
+    requirePermission('settings');
 
     AUTH_READY.then(async () => {
       const cfg = await getOfficeConfig();

@@ -23,6 +23,58 @@ function logout() {
 }
 
 /* =========================================================
+   الأدوار والصلاحيات: كل مستخدم إله مستند بمجموعة users/{uid}
+   يحدد role ("admin" أو "staff") وخارطة permissions.
+   المدير (admin) عنده كل الصلاحيات دائماً بغض النظر عن الخارطة.
+   إذا ما إله مستند بعد (موظف جديد لسا المدير ما أضافه من صفحة
+   "إدارة المستخدمين")، تُعتبر صلاحياته كلها معطّلة احتياطاً.
+   ========================================================= */
+let CURRENT_ROLE = "staff";
+let CURRENT_PERMS = { settings: false, deleteArchive: false, aiGenerator: false };
+
+const PERMS_READY = AUTH_READY.then(async (user) => {
+  try {
+    const snap = await db.collection("users").doc(user.uid).get();
+    if (snap.exists) {
+      const data = snap.data();
+      CURRENT_ROLE = data.role === "admin" ? "admin" : "staff";
+      CURRENT_PERMS = Object.assign(
+        { settings: false, deleteArchive: false, aiGenerator: false },
+        data.permissions || {}
+      );
+    }
+  } catch (e) {
+    console.warn("تعذر جلب صلاحيات المستخدم:", e);
+  }
+  if (typeof applyPermissions === "function") applyPermissions(CURRENT_ROLE, CURRENT_PERMS);
+  return { role: CURRENT_ROLE, perms: CURRENT_PERMS };
+});
+
+function hasPermission(perm) {
+  return CURRENT_ROLE === "admin" || !!CURRENT_PERMS[perm];
+}
+
+// تحوّل المستخدم للرئيسية إذا ما يملك الصلاحية المطلوبة لهذي الصفحة
+function requirePermission(perm) {
+  PERMS_READY.then(() => {
+    if (!hasPermission(perm)) {
+      alert("عذراً، لا تملك صلاحية الوصول لهذه الصفحة");
+      window.location.href = "dashboard.html";
+    }
+  });
+}
+
+// تحوّل المستخدم للرئيسية إذا مو مدير (لصفحات خاصة بالمدير فقط)
+function requireAdmin() {
+  PERMS_READY.then(() => {
+    if (CURRENT_ROLE !== "admin") {
+      alert("هذه الصفحة خاصة بالمدير فقط");
+      window.location.href = "dashboard.html";
+    }
+  });
+}
+
+/* =========================================================
    رفع مرفق (صور/PDF/مستندات وغيرها)
    Firebase Storage غير مفعل بسبب قيود الفوترة بالعراق —
    استبدل هذي الدالة بمنطق الرفع عبر بوت تيليجرام (Telegram Bot API)

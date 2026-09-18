@@ -103,6 +103,7 @@
   <script src="sidebar.js"></script>
   <script>
     renderShell('ai', 'مولد الذكاء الاصطناعي');
+    requirePermission('aiGenerator');
 
     AUTH_READY.then(loadTemplates);
 

@@ -98,6 +98,11 @@
     let CURRENT_PAGE = 1;
 
     AUTH_READY.then(loadLetters);
+    PERMS_READY.then(() => {
+      if (!hasPermission('deleteArchive')) {
+        document.querySelector('button[onclick="archiveSelected()"]').style.display = 'none';
+      }
+    });
 
     async function loadLetters(){
       try {

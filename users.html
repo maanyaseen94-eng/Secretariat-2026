@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>إدارة المستخدمين</title>
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/css/bootstrap.rtl.min.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-shell">
+    <div id="sidebar-placeholder"></div>
+    <div class="main-content">
+      <div id="topbar-placeholder"></div>
+      <div class="page-body">
+
+        <div class="panel mb-3">
+          <div class="panel-header">إضافة / تعديل موظف</div>
+          <div class="panel-body">
+            <div class="alert alert-warning py-2 px-3" style="font-size:12.5px;">
+              هذي الصفحة تتحكم بصلاحيات المستخدم داخل التطبيق فقط. إنشاء حساب الدخول نفسه (البريد وكلمة المرور)
+              لازم يصير أولاً من <strong>Firebase Console → Authentication → Users → Add user</strong>،
+              وبعدها انسخ الـ <strong>UID</strong> الظاهر جنب الحساب والصقه هنا.
+            </div>
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label">اسم الموظف</label>
+                <input type="text" class="form-control" id="fName" placeholder="مثال: سارة أحمد">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">البريد الالكتروني (للعرض فقط)</label>
+                <input type="text" class="form-control" id="fEmail" placeholder="sara@secretariat.local">
+              </div>
+              <div class="col-md-8">
+                <label class="form-label">UID (من Firebase Console)</label>
+                <input type="text" class="form-control" id="fUid" placeholder="الصق الـ UID هنا">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">الدور</label>
+                <select class="form-select" id="fRole" onchange="toggleRoleUI()">
+                  <option value="staff">موظف</option>
+                  <option value="admin">مدير</option>
+                </select>
+              </div>
+              <div class="col-12" id="permsBox">
+                <label class="form-label d-block">صلاحيات الموظف</label>
+                <div class="form-check form-check-inline">
+                  <input class="form-check-input" type="checkbox" id="pSettings">
+                  <label class="form-check-label" for="pSettings">الدخول لصفحة الاعدادات</label>
+                </div>
+                <div class="form-check form-check-inline">
+                  <input class="form-check-input" type="checkbox" id="pDeleteArchive">
+                  <label class="form-check-label" for="pDeleteArchive">حذف / أرشفة الكتب</label>
+                </div>
+                <div class="form-check form-check-inline">
+                  <input class="form-check-input" type="checkbox" id="pAi">
+                  <label class="form-check-label" for="pAi">استخدام مولد الذكاء الاصطناعي</label>
+                </div>
+              </div>
+            </div>
+            <div class="mt-3">
+              <button class="btn btn-primary" onclick="saveUser()"><i class="fa-solid fa-floppy-disk"></i> حفظ</button>
+              <button class="btn btn-secondary" onclick="resetForm()">تفريغ الحقول</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header">المستخدمون الحاليون</div>
+          <div class="panel-body">
+            <div class="table-responsive">
+              <table class="table table-hover align-middle">
+                <thead>
+                  <tr>
+                    <th>الاسم</th><th>البريد</th><th>الدور</th><th>الصلاحيات</th><th>خيارات</th>
+                  </tr>
+                </thead>
+                <tbody id="usersBody">
+                  <tr><td colspan="5" class="text-center text-muted py-4">جارِ التحميل...</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="form-text">
+              حذف مستخدم من هذا الجدول يلغي وصوله داخل التطبيق فقط. لإلغاء قدرته على تسجيل الدخول نهائياً،
+              احذف حسابه أيضاً من Firebase Console → Authentication.
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/js/bootstrap.bundle.min.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  <script src="firebase-config.js"></script>
+  <script src="auth-guard.js"></script>
+  <script src="sidebar.js"></script>
+  <script>
+    renderShell('users', 'إدارة المستخدمين');
+    requireAdmin();
+
+    AUTH_READY.then(loadUsers);
+
+    function toggleRoleUI(){
+      const isAdmin = document.getElementById('fRole').value === 'admin';
+      document.getElementById('permsBox').style.opacity = isAdmin ? '.45' : '1';
+      ['pSettings','pDeleteArchive','pAi'].forEach(id => document.getElementById(id).disabled = isAdmin);
+    }
+
+    function resetForm(){
+      document.getElementById('fName').value = '';
+      document.getElementById('fEmail').value = '';
+      document.getElementById('fUid').value = '';
+      document.getElementById('fRole').value = 'staff';
+      document.getElementById('pSettings').checked = false;
+      document.getElementById('pDeleteArchive').checked = false;
+      document.getElementById('pAi').checked = false;
+      toggleRoleUI();
+    }
+
+    function editUser(uid, data){
+      document.getElementById('fName').value = data.name || '';
+      document.getElementById('fEmail').value = data.email || '';
+      document.getElementById('fUid').value = uid;
+      document.getElementById('fRole').value = data.role === 'admin' ? 'admin' : 'staff';
+      const p = data.permissions || {};
+      document.getElementById('pSettings').checked = !!p.settings;
+      document.getElementById('pDeleteArchive').checked = !!p.deleteArchive;
+      document.getElementById('pAi').checked = !!p.aiGenerator;
+      toggleRoleUI();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    async function saveUser(){
+      const uid = document.getElementById('fUid').value.trim();
+      const name = document.getElementById('fName').value.trim();
+      if (!uid) return alert('لازم تحط UID الحساب (من Firebase Console) أولاً');
+      if (!name) return alert('اكتب اسم الموظف');
+
+      const role = document.getElementById('fRole').value;
+      const data = {
+        name,
+        email: document.getElementById('fEmail').value.trim(),
+        role,
+        permissions: {
+          settings: document.getElementById('pSettings').checked,
+          deleteArchive: document.getElementById('pDeleteArchive').checked,
+          aiGenerator: document.getElementById('pAi').checked,
+        }
+      };
+      try {
+        await db.collection('users').doc(uid).set(data);
+        alert('تم الحفظ بنجاح');
+        resetForm();
+        loadUsers();
+      } catch(e){
+        console.error(e);
+        alert('تعذر الحفظ — تأكد إنك مسجل كمدير بمجموعة users بـ Firestore');
+      }
+    }
+
+    async function deleteUser(uid){
+      if (!confirm('حذف صلاحيات هذا المستخدم داخل التطبيق؟ (لا يحذف حساب الدخول نفسه)')) return;
+      await db.collection('users').doc(uid).delete();
+      loadUsers();
+    }
+
+    async function loadUsers(){
+      const tbody = document.getElementById('usersBody');
+      try {
+        const snap = await db.collection('users').get();
+        if (!snap.size){
+          tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-4">لا يوجد مستخدمون مضافون بعد</td></tr>';
+          return;
+        }
+        tbody.innerHTML = snap.docs.map(d => {
+          const u = d.data();
+          const isAdmin = u.role === 'admin';
+          const permsText = isAdmin ? 'كل الصلاحيات (مدير)' : [
+            u.permissions?.settings ? 'الاعدادات' : null,
+            u.permissions?.deleteArchive ? 'حذف/أرشفة' : null,
+            u.permissions?.aiGenerator ? 'الذكاء الاصطناعي' : null,
+          ].filter(Boolean).join('، ') || '— بدون صلاحيات إضافية —';
+          return `
+            <tr>
+              <td>${u.name || '—'}</td>
+              <td>${u.email || '—'}</td>
+              <td>${isAdmin ? '<span class="badge bg-purple">مدير</span>' : '<span class="badge bg-secondary">موظف</span>'}</td>
+              <td style="font-size:12.5px;">${permsText}</td>
+              <td>
+                <button class="btn btn-outline-primary btn-sm" onclick='editUser(${JSON.stringify(d.id)}, ${JSON.stringify(u)})'><i class="fa-solid fa-pen"></i> تعديل</button>
+                <button class="btn btn-outline-danger btn-sm" onclick="deleteUser('${d.id}')"><i class="fa-solid fa-trash"></i> حذف</button>
+              </td>
+            </tr>`;
+        }).join('');
+      } catch(e){
+        console.warn('تعذر جلب المستخدمين:', e);
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-4">تعذر الاتصال بـ Firestore</td></tr>';
+      }
+    }
+
+    toggleRoleUI();
+  </script>
+</body>
+</html>
