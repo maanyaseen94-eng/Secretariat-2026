@@ -51,13 +51,6 @@
                   <button type="button" class="btn btn-success btn-sm" onclick="addAttachmentField()"><i class="fa-solid fa-plus"></i> إضافة حقل مرفق آخر</button>
                   <div class="form-text">الصيغ المدعومة: PDF, Word, Excel, PowerPoint, الصور, TXT, ZIP/RAR/7Z — 10MB كحد أقصى لكل ملف</div>
                 </div>
-                <div class="mb-3">
-                  <label class="form-label d-block">الجهات المستلمة للكتاب *</label>
-                  <div class="form-check">
-                    <input class="form-check-input" type="checkbox" id="fRecipient" checked>
-                    <label class="form-check-label" for="fRecipient" id="fRecipientLabel">النائب المهندس</label>
-                  </div>
-                </div>
                 <button class="btn btn-primary" onclick="sendLetter()"><i class="fa-solid fa-paper-plane"></i> ارسال</button>
               </div>
 
@@ -114,8 +107,6 @@
       OFFICE_CFG = await getOfficeConfig();
       const { profile } = await PERMS_READY;
 
-      document.getElementById('fRecipientLabel').textContent = OFFICE_CFG.officialName || 'النائب';
-
       // توقيع الكتاب: اسم ومنصب الموظف اللي أنشأه إذا محدد له منصب، وإلا مدير المكتب العام
       document.getElementById('pSignerName').textContent = (profile && profile.name)
         ? profile.name
@@ -139,11 +130,12 @@
       document.getElementById('fDate').value = new Date().toISOString().slice(0,10);
       syncPreview();
 
-      // رقم كتاب تلقائي = عدد الكتب الصادرة + 1
+      // رقم كتاب تلقائي (معاينة فقط) — الرقم الفعلي يُحجز لحظة الإرسال حتى ما يتكرر
       try {
-        const snap = await db.collection('outgoing_letters').get();
-        document.getElementById('fNumber').value = snap.size + 1;
-        document.getElementById('pNumber').textContent = snap.size + 1;
+        const counterSnap = await db.collection('counters').doc('outgoing_letters').get();
+        const nextNum = (counterSnap.exists ? (counterSnap.data().value || 0) : 0) + 1;
+        document.getElementById('fNumber').value = nextNum;
+        document.getElementById('pNumber').textContent = nextNum;
       } catch(e){ document.getElementById('fNumber').value = 1; }
 
       // إذا وصل نص جاهز من مولد الذكاء الاصطناعي، عبّي الفورم منه
@@ -216,15 +208,24 @@
       const attachments = await Promise.all(files.map(uploadAttachment));
 
       try {
-        await db.collection('outgoing_letters').add({
-          number: document.getElementById('fNumber').value,
-          date: document.getElementById('fDate').value,
-          subject, to, body, attachments,
-          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-          createdBy: CURRENT_USER ? CURRENT_USER.uid : null,
-          createdByName: (CURRENT_PROFILE && CURRENT_PROFILE.name) || (CURRENT_USER && CURRENT_USER.displayName) || null,
-          createdByTitle: (CURRENT_PROFILE && CURRENT_PROFILE.title) || null,
-          createdBySignatureUrl: (CURRENT_PROFILE && CURRENT_PROFILE.signatureUrl) || null
+        // نحجز رقم الكتاب داخل معاملة (transaction) حتى يزيد تلقائياً بأمان مع كل إرسال
+        // ولا يتكرر حتى لو أكثر من موظف يرسل بنفس اللحظة
+        const counterRef = db.collection('counters').doc('outgoing_letters');
+        const newLetterRef = db.collection('outgoing_letters').doc();
+        await db.runTransaction(async (tx) => {
+          const counterSnap = await tx.get(counterRef);
+          const nextNum = (counterSnap.exists ? (counterSnap.data().value || 0) : 0) + 1;
+          tx.set(counterRef, { value: nextNum }, { merge: true });
+          tx.set(newLetterRef, {
+            number: nextNum,
+            date: document.getElementById('fDate').value,
+            subject, to, body, attachments,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            createdBy: CURRENT_USER ? CURRENT_USER.uid : null,
+            createdByName: (CURRENT_PROFILE && CURRENT_PROFILE.name) || (CURRENT_USER && CURRENT_USER.displayName) || null,
+            createdByTitle: (CURRENT_PROFILE && CURRENT_PROFILE.title) || null,
+            createdBySignatureUrl: (CURRENT_PROFILE && CURRENT_PROFILE.signatureUrl) || null
+          });
         });
         alert('تم حفظ الكتاب الرسمي بنجاح');
         window.location.href = 'outgoing-letters.html';

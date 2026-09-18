@@ -40,6 +40,11 @@ service cloud.firestore {
       allow update, delete: if hasPerm('deleteArchive');
     }
 
+    // عداد رقم الكتاب الرسمي: أي موظف مسجل يقدر يزيده تلقائياً عند إرسال كتاب
+    match /counters/{id} {
+      allow read, write: if isSignedIn();
+    }
+
     // مولد الذكاء الاصطناعي وقوالبه: بس لصاحب صلاحية الذكاء الاصطناعي (أو المدير)
     match /ai_templates/{id} {
       allow read, write: if hasPerm('aiGenerator');
