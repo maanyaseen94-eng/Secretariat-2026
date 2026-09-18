@@ -70,7 +70,7 @@
             <div class="letter-to">الى / ${letter.to || letter.senderEntity || '—'} المحترم</div>
             <div class="letter-body-text">${letter.body || letter.subject || '—'}</div>
             <div class="letter-stamp">ختم<br>المكتب</div>
-            <div class="letter-signature">${cfg.managerName || cfg.officeName || ''}</div>
+            <div class="letter-signature">${letter.createdByName ? (letter.createdByName + (letter.createdByTitle ? ' - ' + letter.createdByTitle : '')) : (cfg.managerName || cfg.officeName || '')}</div>
             <div class="letter-footer-pattern"></div>
           </div>
         </div>

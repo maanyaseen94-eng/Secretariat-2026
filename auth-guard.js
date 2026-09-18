@@ -31,12 +31,15 @@ function logout() {
    ========================================================= */
 let CURRENT_ROLE = "staff";
 let CURRENT_PERMS = { settings: false, deleteArchive: false, aiGenerator: false };
+// بروفايل المستخدم كامل (اسم، منصب وظيفي، جهة مستلمة ثابتة لكتبه...) — يُقرأ من users/{uid}
+let CURRENT_PROFILE = null;
 
 const PERMS_READY = AUTH_READY.then(async (user) => {
   try {
     const snap = await db.collection("users").doc(user.uid).get();
     if (snap.exists) {
       const data = snap.data();
+      CURRENT_PROFILE = data;
       CURRENT_ROLE = data.role === "admin" ? "admin" : "staff";
       CURRENT_PERMS = Object.assign(
         { settings: false, deleteArchive: false, aiGenerator: false },
@@ -47,7 +50,7 @@ const PERMS_READY = AUTH_READY.then(async (user) => {
     console.warn("تعذر جلب صلاحيات المستخدم:", e);
   }
   if (typeof applyPermissions === "function") applyPermissions(CURRENT_ROLE, CURRENT_PERMS);
-  return { role: CURRENT_ROLE, perms: CURRENT_PERMS };
+  return { role: CURRENT_ROLE, perms: CURRENT_PERMS, profile: CURRENT_PROFILE };
 });
 
 function hasPermission(perm) {

@@ -45,6 +45,15 @@
                   <option value="admin">مدير</option>
                 </select>
               </div>
+              <div class="col-md-6">
+                <label class="form-label">المنصب الوظيفي (يظهر بتوقيع الكتب اللي يسويها)</label>
+                <input type="text" class="form-control" id="fTitle" placeholder="مثال: إداري الأتمتة">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">الجهة المستلمة الثابتة (اختياري)</label>
+                <input type="text" class="form-control" id="fDefaultRecipient" placeholder="مثال: ارشد علي فاضل - مدير إدارة سكرتارية البصرة">
+                <div class="form-text">إذا حطيت قيمة هنا، حقل "الى" بصفحة انشاء كتاب رسمي يتعبى تلقائياً بيها ويصير مقفل وغير قابل للتغيير من الموظف.</div>
+              </div>
               <div class="col-12" id="permsBox">
                 <label class="form-label d-block">صلاحيات الموظف</label>
                 <div class="form-check form-check-inline">
@@ -75,11 +84,11 @@
               <table class="table table-hover align-middle">
                 <thead>
                   <tr>
-                    <th>الاسم</th><th>البريد</th><th>الدور</th><th>الصلاحيات</th><th>خيارات</th>
+                    <th>الاسم</th><th>المنصب</th><th>الدور</th><th>الصلاحيات</th><th>الجهة المستلمة الثابتة</th><th>خيارات</th>
                   </tr>
                 </thead>
                 <tbody id="usersBody">
-                  <tr><td colspan="5" class="text-center text-muted py-4">جارِ التحميل...</td></tr>
+                  <tr><td colspan="6" class="text-center text-muted py-4">جارِ التحميل...</td></tr>
                 </tbody>
               </table>
             </div>
@@ -118,6 +127,8 @@
       document.getElementById('fEmail').value = '';
       document.getElementById('fUid').value = '';
       document.getElementById('fRole').value = 'staff';
+      document.getElementById('fTitle').value = '';
+      document.getElementById('fDefaultRecipient').value = '';
       document.getElementById('pSettings').checked = false;
       document.getElementById('pDeleteArchive').checked = false;
       document.getElementById('pAi').checked = false;
@@ -129,6 +140,8 @@
       document.getElementById('fEmail').value = data.email || '';
       document.getElementById('fUid').value = uid;
       document.getElementById('fRole').value = data.role === 'admin' ? 'admin' : 'staff';
+      document.getElementById('fTitle').value = data.title || '';
+      document.getElementById('fDefaultRecipient').value = data.defaultRecipient || '';
       const p = data.permissions || {};
       document.getElementById('pSettings').checked = !!p.settings;
       document.getElementById('pDeleteArchive').checked = !!p.deleteArchive;
@@ -148,6 +161,8 @@
         name,
         email: document.getElementById('fEmail').value.trim(),
         role,
+        title: document.getElementById('fTitle').value.trim(),
+        defaultRecipient: document.getElementById('fDefaultRecipient').value.trim(),
         permissions: {
           settings: document.getElementById('pSettings').checked,
           deleteArchive: document.getElementById('pDeleteArchive').checked,
@@ -176,7 +191,7 @@
       try {
         const snap = await db.collection('users').get();
         if (!snap.size){
-          tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-4">لا يوجد مستخدمون مضافون بعد</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">لا يوجد مستخدمون مضافون بعد</td></tr>';
           return;
         }
         tbody.innerHTML = snap.docs.map(d => {
@@ -189,10 +204,11 @@
           ].filter(Boolean).join('، ') || '— بدون صلاحيات إضافية —';
           return `
             <tr>
-              <td>${u.name || '—'}</td>
-              <td>${u.email || '—'}</td>
+              <td>${u.name || '—'}<div class="text-muted" style="font-size:11.5px;">${u.email || ''}</div></td>
+              <td>${u.title || '—'}</td>
               <td>${isAdmin ? '<span class="badge bg-purple">مدير</span>' : '<span class="badge bg-secondary">موظف</span>'}</td>
               <td style="font-size:12.5px;">${permsText}</td>
+              <td style="font-size:12.5px;">${u.defaultRecipient || '—'}</td>
               <td>
                 <button class="btn btn-outline-primary btn-sm" onclick='editUser(${JSON.stringify(d.id)}, ${JSON.stringify(u)})'><i class="fa-solid fa-pen"></i> تعديل</button>
                 <button class="btn btn-outline-danger btn-sm" onclick="deleteUser('${d.id}')"><i class="fa-solid fa-trash"></i> حذف</button>
@@ -201,7 +217,7 @@
         }).join('');
       } catch(e){
         console.warn('تعذر جلب المستخدمين:', e);
-        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-4">تعذر الاتصال بـ Firestore</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">تعذر الاتصال بـ Firestore</td></tr>';
       }
     }
 

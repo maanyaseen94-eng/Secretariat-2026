@@ -122,10 +122,26 @@
 
     AUTH_READY.then(async () => {
       OFFICE_CFG = await getOfficeConfig();
+      const { profile } = await PERMS_READY;
+
       document.getElementById('pOfficialName').textContent = OFFICE_CFG.officialName || '[الاسم]';
       document.getElementById('fRecipientLabel').textContent = OFFICE_CFG.officialName || 'النائب';
-      document.getElementById('pSignature').textContent = OFFICE_CFG.managerName || OFFICE_CFG.officeName || '—';
+
+      // توقيع الكتاب: اسم ومنصب الموظف اللي أنشأه إذا محدد له منصب، وإلا مدير المكتب العام
+      document.getElementById('pSignature').textContent = (profile && profile.title)
+        ? (profile.name || '') + ' - ' + profile.title
+        : (OFFICE_CFG.managerName || OFFICE_CFG.officeName || '—');
+
+      // إذا الموظف إله جهة مستلمة ثابتة محددة من صفحة إدارة المستخدمين، نعبي حقل "الى" ونقفله
+      if (profile && profile.defaultRecipient) {
+        const toInput = document.getElementById('fTo');
+        toInput.value = profile.defaultRecipient;
+        toInput.readOnly = true;
+        toInput.classList.add('bg-light');
+      }
+
       document.getElementById('fDate').value = new Date().toISOString().slice(0,10);
+      syncPreview();
 
       // رقم كتاب تلقائي = عدد الكتب الصادرة + 1
       try {
@@ -187,7 +203,9 @@
           date: document.getElementById('fDate').value,
           subject, to, body, attachments,
           createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-          createdBy: CURRENT_USER ? CURRENT_USER.uid : null
+          createdBy: CURRENT_USER ? CURRENT_USER.uid : null,
+          createdByName: (CURRENT_PROFILE && CURRENT_PROFILE.name) || (CURRENT_USER && CURRENT_USER.displayName) || null,
+          createdByTitle: (CURRENT_PROFILE && CURRENT_PROFILE.title) || null
         });
         alert('تم حفظ الكتاب الرسمي بنجاح');
         window.location.href = 'outgoing-letters.html';
