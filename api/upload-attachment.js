@@ -13,7 +13,7 @@
    ملاحظة: الحد الأقصى لحجم الملف عبر Telegram Bot API هو 50 ميغابايت
    ========================================================= */
 
-const formidable = require("formidable");
+const { formidable } = require("formidable");
 const fs = require("fs");
 
 export const config = { api: { bodyParser: false } };
