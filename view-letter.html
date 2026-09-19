@@ -24,6 +24,58 @@
           </div>
         </div>
 
+        <div class="panel mt-4">
+          <div class="panel-header">الاجراء الاداري على الكتاب</div>
+          <div class="panel-body">
+            <form id="actionForm" onsubmit="return false;">
+              <input type="hidden" id="editingActionId" value="">
+              <div class="row g-3">
+                <div class="col-md-4">
+                  <label class="form-label">الجهة</label>
+                  <input type="text" class="form-control" id="actionEntity" placeholder="الجهة المتخذة للإجراء">
+                </div>
+                <div class="col-md-8">
+                  <label class="form-label">الاجراء</label>
+                  <textarea class="form-control" id="actionText" rows="2" placeholder="نص الاجراء المتخذ على الكتاب..."></textarea>
+                </div>
+              </div>
+              <div class="mt-3">
+                <label class="form-label d-flex justify-content-between align-items-center">
+                  <span>المرفقات</span>
+                  <button type="button" class="btn btn-sm btn-outline-primary" onclick="addActionAttachmentField()"><i class="fa-solid fa-paperclip"></i> إضافة مرفق</button>
+                </label>
+                <div id="actionAttachmentsWrap"></div>
+              </div>
+              <div class="mt-3 d-flex gap-2">
+                <button type="button" class="btn btn-primary" onclick="saveAction()"><i class="fa-solid fa-floppy-disk"></i> حفظ الاجراء</button>
+                <button type="button" class="btn btn-outline-secondary d-none" id="cancelEditBtn" onclick="cancelEditAction()">إلغاء التعديل</button>
+              </div>
+            </form>
+
+            <hr class="my-4">
+
+            <div class="d-flex align-items-center justify-content-between mb-2">
+              <h6 class="mb-0">الإجراءات المتبعة <span class="badge bg-secondary" id="actionsCount">0</span></h6>
+            </div>
+            <div class="table-responsive">
+              <table class="table table-hover align-middle">
+                <thead>
+                  <tr>
+                    <th>الجهة</th>
+                    <th>الإجراء</th>
+                    <th>المرفقات</th>
+                    <th>التاريخ والمسؤول</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="actionsBody">
+                  <tr><td colspan="5" class="text-center text-muted py-3">جارِ التحميل...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>
   </div>
@@ -40,25 +92,54 @@
     const params = new URLSearchParams(location.search);
     const type = params.get('type') || 'incoming';
     const id = params.get('id');
+    const coll = type === 'incoming' ? 'incoming_letters' : 'outgoing_letters';
     renderShell(type === 'incoming' ? 'incoming' : 'outgoing', 'عرض الكتاب');
 
+    // بيانات الكتاب الحالي + الإجراءات المسجلة عليه (تصير متاحة لكل الدوال بالصفحة)
+    let LETTER = null;
+    let CURRENT_ACTIONS = [];
+    let EDITING_ACTION_ID = null;
+
+    // يحول رقم عادي (Western digits) لأرقام عربية (Arabic-Indic)، ويضيف رمز "س.ن" (سري ونظامي)
+    // للكتب الصادرة بس (العدد التلقائي تبع مكتبنا) — الكتب الواردة تحتفظ برقمها الأصلي من الجهة المرسلة
+    function formatOfficialNumber(n){
+      const arabicDigits = ['٠','١','٢','٣','٤','٥','٦','٧','٨','٩'];
+      const arabicNum = String(n).replace(/[0-9]/g, d => arabicDigits[d]);
+      return 'س.ن / ' + arabicNum;
+    }
+
+    function fmtDT(v){
+      if (!v) return '—';
+      const d = v.toDate ? v.toDate() : new Date(v);
+      return isNaN(d) ? '—' : d.toLocaleString('ar-IQ');
+    }
+
+    function attachmentChip(a, i){
+      const hasRealFile = a && a.url && a.url !== '#';
+      return `<a href="${hasRealFile ? a.url : '#'}" target="_blank" rel="noopener"
+        class="btn btn-outline-secondary btn-sm mb-1 ${hasRealFile ? '' : 'disabled'}"
+        ${hasRealFile ? 'download' : 'title="لم يتم رفع الملف الفعلي بعد" onclick="return false;"'}>
+        <i class="fa-solid fa-file-arrow-down"></i> ${(a && a.name) || ('مرفق ' + (i + 1))}
+      </a>`;
+    }
+
     AUTH_READY.then(async () => {
+      const { profile } = await PERMS_READY;
       const cfg = await getOfficeConfig();
       const content = document.getElementById('content');
       if (!id) { content.innerHTML = '<p class="text-danger">لا يوجد معرّف كتاب بالرابط</p>'; return; }
 
-      const coll = type === 'incoming' ? 'incoming_letters' : 'outgoing_letters';
       let letter;
       try {
         const doc = await db.collection(coll).doc(id).get();
         if (!doc.exists) { content.innerHTML = '<p class="text-danger">لم يتم العثور على الكتاب</p>'; return; }
         letter = doc.data();
       } catch(e){ content.innerHTML = '<p class="text-danger">تعذر جلب بيانات الكتاب</p>'; return; }
+      LETTER = letter;
 
       // تسجيل تاريخ ووقت القراءة: أول مرة يفتح فيها هذا الكتاب شخص غير الجهة اللي أنشأته
       let readInfoHtml = '';
       if (type === 'outgoing'){
-        const { profile } = await PERMS_READY;
         if (!letter.readAt && CURRENT_USER && CURRENT_USER.uid !== letter.createdBy){
           const readAtNow = new Date();
           try {
@@ -78,12 +159,21 @@
         </div>`;
       }
 
+      const attachmentsHtml = (letter.attachments && letter.attachments.length) ? `
+        <div class="mt-3 text-center">
+          <div class="fw-bold mb-2" style="font-size:13px;"><i class="fa-solid fa-paperclip"></i> مرفقات الكتاب (${letter.attachments.length})</div>
+          <div class="d-flex flex-wrap gap-2 justify-content-center">
+            ${letter.attachments.map(attachmentChip).join('')}
+          </div>
+        </div>` : '';
+
       content.innerHTML = `
         ${readInfoHtml ? `<div class="text-center">${readInfoHtml}</div>` : ''}
+        <div id="overdueAlertWrap" class="text-center"></div>
         <div class="letter-preview-wrap">
           <div class="letter-page" id="printArea">
             <div class="letter-meta">
-              <div>العدد : <span class="val">${letter.number || '—'}</span></div>
+              <div>العدد : <span class="val">${letter.number ? (type === 'outgoing' ? formatOfficialNumber(letter.number) : letter.number) : '—'}</span></div>
               <div>التأريخ : <span class="val">${letter.date || '—'}</span></div>
             </div>
             <div class="letter-to">الى / ${letter.to || letter.senderEntity || '—'} المحترم</div>
@@ -96,10 +186,13 @@
             </div>
           </div>
         </div>
+        ${attachmentsHtml}
         <div class="d-flex gap-2 justify-content-center mt-3">
           <button class="btn btn-dark" onclick="window.print()"><i class="fa-solid fa-print"></i> طباعة</button>
           <button class="btn btn-dark" onclick="downloadPng()"><i class="fa-solid fa-image"></i> تحميل PNG</button>
         </div>`;
+
+      loadActions();
     });
 
     function downloadPng(){
@@ -109,6 +202,165 @@
         link.href = canvas.toDataURL('image/png');
         link.click();
       });
+    }
+
+    /* =========================================================
+       الاجراء الاداري على الكتاب: مجموعة فرعية actions تحت مستند الكتاب
+       نفسه (incoming_letters/{id}/actions أو outgoing_letters/{id}/actions)
+       ========================================================= */
+    function actionsColl(){ return db.collection(coll).doc(id).collection('actions'); }
+
+    function addActionAttachmentField(){
+      const wrap = document.getElementById('actionAttachmentsWrap');
+      const row = document.createElement('div');
+      row.className = 'd-flex gap-2 align-items-center mb-2 action-attach-row';
+      row.innerHTML = `
+        <input type="file" class="form-control form-control-sm action-attach-input">
+        <button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('.action-attach-row').remove()"><i class="fa-solid fa-xmark"></i></button>`;
+      wrap.appendChild(row);
+    }
+
+    async function loadActions(){
+      const tbody = document.getElementById('actionsBody');
+      try {
+        const snap = await actionsColl().get();
+        CURRENT_ACTIONS = snap.docs.map(d => Object.assign({ id: d.id }, d.data()))
+          .sort((a, b) => {
+            const am = a.createdAt && a.createdAt.toMillis ? a.createdAt.toMillis() : 0;
+            const bm = b.createdAt && b.createdAt.toMillis ? b.createdAt.toMillis() : 0;
+            return bm - am;
+          });
+      } catch(e){
+        console.warn('تعذر جلب الإجراءات المسجلة على الكتاب:', e);
+        CURRENT_ACTIONS = [];
+      }
+
+      document.getElementById('actionsCount').textContent = CURRENT_ACTIONS.length;
+
+      if (!CURRENT_ACTIONS.length){
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-3">لا توجد إجراءات مسجلة على هذا الكتاب بعد</td></tr>';
+      } else {
+        tbody.innerHTML = CURRENT_ACTIONS.map(a => {
+          const canManage = CURRENT_USER && (CURRENT_USER.uid === a.createdBy || hasPermission('deleteArchive'));
+          const attHtml = (a.attachments && a.attachments.length)
+            ? a.attachments.map((f, i) => `<a href="${f.url && f.url !== '#' ? f.url : '#'}" target="_blank" rel="noopener" class="badge bg-light text-dark border text-decoration-none me-1 mb-1 d-inline-block">${f.name || ('مرفق ' + (i + 1))}</a>`).join('')
+            : '<span class="text-muted">—</span>';
+          return `
+            <tr>
+              <td>${a.entity || '—'}</td>
+              <td style="white-space:pre-wrap;max-width:280px;">${a.text || '—'}</td>
+              <td>${attHtml}</td>
+              <td style="font-size:12px;">${fmtDT(a.createdAt)}<br><span class="text-muted">${a.createdByName || ''}</span></td>
+              <td class="text-nowrap">
+                ${canManage ? `
+                  <button class="btn btn-outline-primary btn-sm" onclick="editAction('${a.id}')" title="تعديل"><i class="fa-solid fa-pen"></i></button>
+                  <button class="btn btn-outline-danger btn-sm" onclick="deleteAction('${a.id}')" title="حذف"><i class="fa-solid fa-trash"></i></button>
+                ` : ''}
+              </td>
+            </tr>`;
+        }).join('');
+      }
+
+      updateOverdueAlert();
+    }
+
+    function resetActionForm(){
+      EDITING_ACTION_ID = null;
+      document.getElementById('editingActionId').value = '';
+      document.getElementById('actionEntity').value = '';
+      document.getElementById('actionText').value = '';
+      document.getElementById('actionAttachmentsWrap').innerHTML = '';
+      document.getElementById('cancelEditBtn').classList.add('d-none');
+    }
+
+    function cancelEditAction(){ resetActionForm(); }
+
+    async function saveAction(){
+      const entity = document.getElementById('actionEntity').value.trim();
+      const text = document.getElementById('actionText').value.trim();
+      if (!text){ alert('الرجاء كتابة نص الاجراء'); return; }
+
+      const fileInputs = [...document.querySelectorAll('.action-attach-input')].filter(i => i.files && i.files[0]);
+      let newAttachments = [];
+      try {
+        newAttachments = await Promise.all(fileInputs.map(i => uploadAttachment(i.files[0])));
+      } catch(e){ console.warn('تعذر رفع أحد مرفقات الاجراء:', e); }
+
+      const { profile } = await PERMS_READY;
+      try {
+        if (EDITING_ACTION_ID){
+          const existing = CURRENT_ACTIONS.find(a => a.id === EDITING_ACTION_ID);
+          const mergedAttachments = ((existing && existing.attachments) || []).concat(newAttachments);
+          await actionsColl().doc(EDITING_ACTION_ID).update({
+            entity, text, attachments: mergedAttachments,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+          });
+        } else {
+          await actionsColl().add({
+            entity, text, attachments: newAttachments,
+            createdBy: CURRENT_USER.uid,
+            createdByName: (profile && profile.name) || CURRENT_USER.displayName || '',
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+          });
+        }
+        resetActionForm();
+        loadActions();
+      } catch(e){
+        console.error(e);
+        alert('تعذر حفظ الاجراء، تحقق من الاتصال أو الصلاحيات');
+      }
+    }
+
+    function editAction(actionId){
+      const a = CURRENT_ACTIONS.find(x => x.id === actionId);
+      if (!a) return;
+      EDITING_ACTION_ID = actionId;
+      document.getElementById('editingActionId').value = actionId;
+      document.getElementById('actionEntity').value = a.entity || '';
+      document.getElementById('actionText').value = a.text || '';
+      document.getElementById('actionAttachmentsWrap').innerHTML = '';
+      document.getElementById('cancelEditBtn').classList.remove('d-none');
+      document.getElementById('actionForm').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    async function deleteAction(actionId){
+      if (!confirm('هل تريد حذف هذا الاجراء نهائياً؟')) return;
+      try {
+        await actionsColl().doc(actionId).delete();
+        if (EDITING_ACTION_ID === actionId) resetActionForm();
+        loadActions();
+      } catch(e){
+        console.error(e);
+        alert('تعذر حذف الاجراء');
+      }
+    }
+
+    /* =========================================================
+       تنبيه: يمر أكثر من 10 أيام على الكتاب دون تسجيل أي اجراء/رد عليه
+       (يُحسب من تاريخ إرسال/استلام الكتاب، ويختفي تلقائياً بمجرد تسجيل أول اجراء)
+       ========================================================= */
+    function getLetterTimestampMs(){
+      const ts = LETTER && (LETTER.createdAt || LETTER.receivedAt);
+      if (!ts) return null;
+      if (ts.toDate) return ts.toDate().getTime();
+      if (ts.toMillis) return ts.toMillis();
+      const d = new Date(ts);
+      return isNaN(d) ? null : d.getTime();
+    }
+
+    function updateOverdueAlert(){
+      const wrap = document.getElementById('overdueAlertWrap');
+      if (!wrap) return;
+      const tsMs = getLetterTimestampMs();
+      if (tsMs === null || CURRENT_ACTIONS.length > 0){ wrap.innerHTML = ''; return; }
+      const days = Math.floor((Date.now() - tsMs) / 86400000);
+      if (days >= 10){
+        wrap.innerHTML = `<div class="alert alert-danger d-inline-block px-3 py-2 mb-3">
+          <i class="fa-solid fa-triangle-exclamation"></i> تنبيه: مضى ${days} يوماً على هذا الكتاب دون تسجيل أي اجراء أو رد عليه
+        </div>`;
+      } else {
+        wrap.innerHTML = '';
+      }
     }
   </script>
 </body>

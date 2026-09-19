@@ -58,7 +58,7 @@
                 <div class="letter-preview-wrap">
                   <div class="letter-page" id="printArea">
                     <div class="letter-meta">
-                      <div>العدد : <span class="val" id="pNumber">١</span></div>
+                      <div>العدد : <span class="val" id="pNumber">س.ن / ١</span></div>
                       <div>التأريخ : <span class="val" id="pDate">—</span></div>
                     </div>
                     <div class="letter-to">
@@ -99,6 +99,14 @@
   <script>
     renderShell('outgoing', 'إنشاء كتاب رسمي');
 
+    // يحول رقم عادي (Western digits) لأرقام عربية (Arabic-Indic)، ويضيف رمز "س.ن" (سري ونظامي)
+    // حتى يطلع شكل العدد التلقائي متناسق مع شكل التأريخ العربي
+    function formatOfficialNumber(n){
+      const arabicDigits = ['٠','١','٢','٣','٤','٥','٦','٧','٨','٩'];
+      const arabicNum = String(n).replace(/[0-9]/g, d => arabicDigits[d]);
+      return 'س.ن / ' + arabicNum;
+    }
+
     let OFFICE_CFG = DEFAULT_OFFICE;
 
     AUTH_READY.then(async () => {
@@ -134,8 +142,8 @@
         const counterSnap = await db.collection('counters').doc(outgoingCounterId()).get();
         const nextNum = (counterSnap.exists ? (counterSnap.data().value || 0) : 0) + 1;
         document.getElementById('fNumber').value = nextNum;
-        document.getElementById('pNumber').textContent = nextNum;
-      } catch(e){ document.getElementById('fNumber').value = 1; }
+        document.getElementById('pNumber').textContent = formatOfficialNumber(nextNum);
+      } catch(e){ document.getElementById('fNumber').value = 1; document.getElementById('pNumber').textContent = formatOfficialNumber(1); }
 
       // إذا وصل نص جاهز من مولد الذكاء الاصطناعي، عبّي الفورم منه
       const draft = JSON.parse(localStorage.getItem('ai_draft_letter') || 'null');

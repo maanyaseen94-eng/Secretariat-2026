@@ -57,6 +57,20 @@ service cloud.firestore {
       allow read, write: if isSignedIn();
     }
 
+    // الاجراء الاداري على الكتاب (نص + مرفقات): أي موظف مسجل يشوف/يضيف اجراء،
+    // بس صاحب الاجراء نفسه (أو صاحب صلاحية حذف/أرشفة أو المدير) يقدر يعدله أو يحذفه
+    function canManageAction() {
+      return isSignedIn() && (request.auth.uid == resource.data.createdBy || hasPerm('deleteArchive'));
+    }
+    match /incoming_letters/{letterId}/actions/{actionId} {
+      allow read, create: if isSignedIn();
+      allow update, delete: if canManageAction();
+    }
+    match /outgoing_letters/{letterId}/actions/{actionId} {
+      allow read, create: if isSignedIn();
+      allow update, delete: if canManageAction();
+    }
+
     // مولد الذكاء الاصطناعي وقوالبه: بس لصاحب صلاحية الذكاء الاصطناعي (أو المدير)
     match /ai_templates/{id} {
       allow read, write: if hasPerm('aiGenerator');

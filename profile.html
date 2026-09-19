@@ -28,15 +28,37 @@
               <input type="email" class="form-control" id="fEmail" disabled>
               <div class="form-text">تغيير البريد يتطلب إعادة تسجيل الدخول لأسباب أمنية</div>
             </div>
-            <div class="mb-3">
-              <label class="form-label">كلمة المرور</label>
-              <div class="position-relative">
-                <input type="password" class="form-control" id="fPassword" placeholder="اتركه فارغاً إذا لم ترغب في التغيير">
-                <button type="button" class="btn btn-sm position-absolute top-50 translate-middle-y start-0" style="background:none;" onclick="togglePwd()"><i class="fa-regular fa-eye" id="pwdIcon"></i></button>
-              </div>
-            </div>
             <button class="btn btn-primary" onclick="updateProfile()">تحديث البيانات</button>
             <button class="btn btn-secondary" onclick="location.href='dashboard.html'">إلغاء</button>
+          </div>
+        </div>
+
+        <div class="panel mt-4" style="max-width:640px;">
+          <div class="panel-header">تغيير كلمة المرور</div>
+          <div class="panel-body">
+            <div class="mb-3">
+              <label class="form-label">كلمة المرور الحالية</label>
+              <div class="position-relative">
+                <input type="password" class="form-control" id="curPassword" autocomplete="current-password">
+                <button type="button" class="btn btn-sm position-absolute top-50 translate-middle-y start-0" style="background:none;" onclick="togglePwdField('curPassword', this)"><i class="fa-regular fa-eye"></i></button>
+              </div>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">كلمة المرور الجديدة</label>
+              <div class="position-relative">
+                <input type="password" class="form-control" id="newPassword" autocomplete="new-password">
+                <button type="button" class="btn btn-sm position-absolute top-50 translate-middle-y start-0" style="background:none;" onclick="togglePwdField('newPassword', this)"><i class="fa-regular fa-eye"></i></button>
+              </div>
+              <div class="form-text">6 أحرف على الأقل</div>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">تأكيد كلمة المرور الجديدة</label>
+              <div class="position-relative">
+                <input type="password" class="form-control" id="confirmPassword" autocomplete="new-password">
+                <button type="button" class="btn btn-sm position-absolute top-50 translate-middle-y start-0" style="background:none;" onclick="togglePwdField('confirmPassword', this)"><i class="fa-regular fa-eye"></i></button>
+              </div>
+            </div>
+            <button class="btn btn-primary" id="changePwdBtn" onclick="changePassword()"><i class="fa-solid fa-key"></i> تغيير كلمة المرور</button>
           </div>
         </div>
       </div>
@@ -58,9 +80,9 @@
       document.getElementById('fEmail').value = user.email || '';
     });
 
-    function togglePwd(){
-      const input = document.getElementById('fPassword');
-      const icon = document.getElementById('pwdIcon');
+    function togglePwdField(inputId, btn){
+      const input = document.getElementById(inputId);
+      const icon = btn.querySelector('i');
       const show = input.type === 'password';
       input.type = show ? 'text' : 'password';
       icon.className = show ? 'fa-regular fa-eye-slash' : 'fa-regular fa-eye';
@@ -68,14 +90,47 @@
 
     async function updateProfile(){
       const name = document.getElementById('fName').value.trim();
-      const pwd = document.getElementById('fPassword').value;
       try {
         if (name) await CURRENT_USER.updateProfile({ displayName: name });
-        if (pwd) await CURRENT_USER.updatePassword(pwd);
         alert('تم تحديث البيانات بنجاح');
       } catch(e){
         console.error(e);
-        alert('تعذر التحديث: ' + (e.message || 'قد تحتاج إعادة تسجيل الدخول لتغيير كلمة المرور'));
+        alert('تعذر تحديث البيانات: ' + (e.message || ''));
+      }
+    }
+
+    // تغيير كلمة المرور: كل حساب يقدر يغيّر كلمة المرور الخاصة به فقط (بعد التحقق
+    // من كلمة المرور الحالية عبر reauthenticate — لازم لأن Firebase يرفض تغيير كلمة
+    // المرور مباشرة إذا الجلسة قديمة، ويرجع خطأ auth/requires-recent-login)
+    async function changePassword(){
+      const current = document.getElementById('curPassword').value;
+      const next = document.getElementById('newPassword').value;
+      const confirmVal = document.getElementById('confirmPassword').value;
+
+      if (!current || !next || !confirmVal){ alert('الرجاء تعبئة كل حقول كلمة المرور'); return; }
+      if (next.length < 6){ alert('كلمة المرور الجديدة يجب أن لا تقل عن 6 أحرف'); return; }
+      if (next !== confirmVal){ alert('كلمة المرور الجديدة وتأكيدها غير متطابقين'); return; }
+
+      const btn = document.getElementById('changePwdBtn');
+      btn.disabled = true;
+      try {
+        const cred = firebase.auth.EmailAuthProvider.credential(CURRENT_USER.email, current);
+        await CURRENT_USER.reauthenticateWithCredential(cred);
+        await CURRENT_USER.updatePassword(next);
+        alert('تم تغيير كلمة المرور بنجاح');
+        document.getElementById('curPassword').value = '';
+        document.getElementById('newPassword').value = '';
+        document.getElementById('confirmPassword').value = '';
+      } catch(e){
+        console.error(e);
+        let msg = 'تعذر تغيير كلمة المرور';
+        if (e.code === 'auth/wrong-password' || e.code === 'auth/invalid-credential') msg = 'كلمة المرور الحالية غير صحيحة';
+        else if (e.code === 'auth/weak-password') msg = 'كلمة المرور الجديدة ضعيفة جداً';
+        else if (e.code === 'auth/too-many-requests') msg = 'محاولات كثيرة جداً، حاول لاحقاً';
+        else if (e.code === 'auth/network-request-failed') msg = 'تحقق من الاتصال بالإنترنت';
+        alert(msg);
+      } finally {
+        btn.disabled = false;
       }
     }
   </script>
