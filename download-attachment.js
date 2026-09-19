@@ -8,6 +8,9 @@
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 
 export default async function handler(req, res) {
+  // CORS (احتياطاً، للسماح بأي استخدام مستقبلي عبر fetch من نطاق مختلف)
+  res.setHeader("Access-Control-Allow-Origin", "*");
+
   const fileId = req.query.file_id;
   const name = req.query.name || "مرفق";
   if (!fileId) return res.status(400).json({ error: "file_id مطلوب" });
