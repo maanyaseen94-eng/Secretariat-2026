@@ -1,0 +1,10 @@
+{
+  "name": "secretariat-app-api",
+  "version": "1.0.0",
+  "private": true,
+  "description": "دوال Vercel السيرفرلس لتطبيق سكرتارية النائب (رفع/تحميل المرفقات عبر بوت تيليجرام + مولد الذكاء الاصطناعي الاختياري)",
+  "dependencies": {
+    "formidable": "^3.5.1",
+    "@anthropic-ai/sdk": "^0.27.0"
+  }
+}

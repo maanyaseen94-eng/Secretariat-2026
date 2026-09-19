@@ -18,21 +18,34 @@ HTML/CSS/JS خام بدون أي Build step — نفس نمط مشاريعك ا�
 
 4. **الاعدادات داخل التطبيق**: بعد تسجيل الدخول، روح لصفحة "الاعدادات" وعبّي اسم النائب واسم المكتب — هذا يظهر تلقائياً بشاشة الترحيب وترويسة الكتب الرسمية.
 
-5. **مولد الذكاء الاصطناعي (اختياري)**:
-   - انشر ملف `api/generate-letter.js` كمشروع Vercel منفصل (نفس نمط مشروعك "Secretary-" السابق).
-   - ثبت `npm install @anthropic-ai/sdk formidable` بذلك المشروع.
-   - أضف متغير البيئة `ANTHROPIC_API_KEY` بإعدادات Vercel.
-   - انسخ رابط الدالة المنشورة وحطه بـ `APP_CONFIG.AI_ENDPOINT` داخل `firebase-config.js`.
+5. **نشر دوال Vercel** (مطلوب لرفع/تحميل المرفقات، واختياري لمولد الذكاء الاصطناعي) — إذا ما عندك حساب/مشروع Vercel أصلاً:
 
-6. **رفع المرفقات (عبر بوت تيليجرام)**: التطبيق ما يستخدم Firebase Storage (بسبب قيود الفوترة بالعراق) — الرفع يصير عبر بوت تيليجرام:
-   - أنشئ بوت جديد بمحادثة مع [@BotFather](https://t.me/BotFather) على تيليجرام بأمر `/newbot`، وخذ الـ Token اللي يعطيك ياه.
-   - أنشئ مجموعة أو قناة خاصة (تخزين فقط، تقدر تخليها مخفية)، وضيف البوت فيها كـ **أدمن**.
-   - احصل على `chat_id` تبع هذي المجموعة/القناة (مثلاً بإضافة بوت [@userinfobot](https://t.me/userinfobot) مؤقتاً، أو بمراسلة البوت وفتح `https://api.telegram.org/bot<TOKEN>/getUpdates`).
-   - انشر ملفي `api/upload-attachment.js` و `api/download-attachment.js` بنفس مشروع Vercel اللي نشرت فيه `api/generate-letter.js` (نفس الخطوة 5 أدناه)، وثبت `npm install formidable` إذا ما كان مثبت.
-   - أضف بإعدادات Vercel متغيرين بيئة: `TELEGRAM_BOT_TOKEN` و `TELEGRAM_CHAT_ID`.
-   - حدّث `APP_CONFIG.UPLOAD_ENDPOINT` بملف `firebase-config.js` برابط الدالة المنشورة، مثلاً:
-     `https://your-project.vercel.app/api/upload-attachment`
-   - بدون هذا الإعداد، تبقى المرفقات تُحفظ بالاسم فقط بدون رابط تحميل فعلي (زي ما كانت سابقاً).
+   **أ) إنشاء الحساب والمشروع (مرة وحدة فقط)**
+   1. تأكد إن كل ملفات هذا التطبيق (بما فيها `package.json` و`api/`) موجودة بمستودع GitHub تبعك (نفس مستودع `Secretariat-2026`، أو مستودع منفصل إذا تفضل).
+   2. افتح [vercel.com](https://vercel.com) وسجل دخول بخيار **Continue with GitHub**.
+   3. اضغط **Add New... → Project**، واختر نفس مستودع GitHub تبع التطبيق، ثم **Deploy** (بدون أي إعدادات إضافية — Vercel يتعرف تلقائياً على مجلد `api/` ويشغّله كدوال سيرفرلس، ويثبت `package.json` تلقائياً).
+   4. بعد ما ينتهي النشر، راح ياخذ مشروعك رابط شبيه بـ: `https://secretariat-2026.vercel.app`.
+
+   **ب) متغيرات البيئة**
+   من صفحة المشروع بـ Vercel → **Settings → Environment Variables**، أضف حسب الميزة اللي تريدها:
+   - لرفع/تحميل المرفقات (عبر بوت تيليجرام):
+     - `TELEGRAM_BOT_TOKEN` — توكن البوت (تحصل عليه من محادثة [@BotFather](https://t.me/BotFather) بأمر `/newbot`).
+     - `TELEGRAM_CHAT_ID` — آيدي مجموعة أو قناة خاصة تنخزن فيها الملفات: أنشئها، ضيف البوت فيها كـ **أدمن**، أرسل أي رسالة داخلها، وبعدين افتح بمتصفحك (من جهازك مباشرة، مو من هنا) الرابط:
+       `https://api.telegram.org/bot<التوكن>/getUpdates`
+       وراح تلقى `"chat":{"id": ...}` — هذا الرقم هو الـ chat_id (ممكن يكون بالسالب إذا مجموعة).
+   - لمولد الذكاء الاصطناعي (اختياري): `ANTHROPIC_API_KEY`.
+
+   بعد إضافة أي متغير بيئة لازم تعمل **Redeploy** للمشروع من تبويب Deployments حتى تنطبق.
+
+   **ج) ربط الروابط بالتطبيق**
+   حدّث بملف `firebase-config.js`:
+   ```js
+   UPLOAD_ENDPOINT: "https://your-project.vercel.app/api/upload-attachment",
+   AI_ENDPOINT: "https://your-project.vercel.app/api/generate-letter", // إذا فعّلت مولد الذكاء الاصطناعي
+   ```
+   بدون إعداد `UPLOAD_ENDPOINT`، تبقى المرفقات تُحفظ بالاسم فقط بدون رابط تحميل فعلي (زي ما كانت سابقاً).
+
+   > تنويه أمان: توكن بوت تيليجرام والـ API keys بيانات حساسة — لا تحطها إلا بخانة Environment Variables بـ Vercel (تنخزن مشفّرة وما تظهر بالكود المنشور للعامة). إذا صار وانكشف توكن البوت بالغلط بأي مكان، تقدر تلغيه وتنشئ وحدة جديدة له عبر أمر `/revoke` بمحادثة BotFather.
 
 ## بنية المشروع
 
@@ -54,6 +67,7 @@ firestore.rules        قواعد أمان أساسية لـ Firestore
 api/generate-letter.js     دالة Vercel لتوليد الكتب عبر Claude API
 api/upload-attachment.js   دالة Vercel لرفع مرفق للكتب عبر بوت تيليجرام
 api/download-attachment.js دالة Vercel لتحميل مرفق سابق عبر بوت تيليجرام
+package.json               اعتماديات دوال Vercel (formidable + @anthropic-ai/sdk)
 ```
 
 ## مجموعات Firestore المتوقعة
