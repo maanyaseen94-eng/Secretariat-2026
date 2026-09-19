@@ -180,7 +180,7 @@
             ${letter.body ? `<div class="letter-subject">م / ${letter.subject || '—'}</div>` : ''}
             <div class="letter-body-text">${letter.body || letter.subject || '—'}</div>
             <div class="signature-block">
-              <div class="sig-img-wrap">${letter.createdBySignatureUrl ? `<img src="${letter.createdBySignatureUrl}" alt="توقيع" style="width:100%;height:100%;object-fit:contain;">` : 'ختم<br>المكتب'}</div>
+              <div class="sig-img-wrap" ${letter.createdBySignatureUrl ? 'style="border:none;"' : ''}>${letter.createdBySignatureUrl ? `<img src="${letter.createdBySignatureUrl}" alt="توقيع" style="width:100%;height:100%;object-fit:contain;">` : 'ختم<br>المكتب'}</div>
               <div class="sig-name">${letter.createdByName || cfg.managerName || cfg.officeName || ''}</div>
               <div class="sig-title">${letter.createdByTitle || ''}</div>
             </div>
@@ -243,7 +243,7 @@
         tbody.innerHTML = CURRENT_ACTIONS.map(a => {
           const canManage = CURRENT_USER && (CURRENT_USER.uid === a.createdBy || hasPermission('deleteArchive'));
           const attHtml = (a.attachments && a.attachments.length)
-            ? a.attachments.map((f, i) => `<a href="${f.url && f.url !== '#' ? f.url : '#'}" target="_blank" rel="noopener" class="badge bg-light text-dark border text-decoration-none me-1 mb-1 d-inline-block">${f.name || ('مرفق ' + (i + 1))}</a>`).join('')
+            ? `<div class="d-flex flex-wrap gap-1">${a.attachments.map(attachmentChip).join('')}</div>`
             : '<span class="text-muted">—</span>';
           return `
             <tr>

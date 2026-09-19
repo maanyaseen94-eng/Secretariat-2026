@@ -200,7 +200,8 @@
       return ALL_LETTERS.filter(l => {
         if (CURRENT_FILTER === 'unread' && l.status !== 'unread') return false;
         if (CURRENT_FILTER === 'archived' && l.status !== 'archived') return false;
-        if (CURRENT_FILTER === 'updated' && !l.updatedAt) return false;
+        // "المحدثة": الكتب اللي تم تسجيل اجراء إداري واحد على الأقل عليها (نفس منطق تنبيه الـ10 أيام)
+        if (CURRENT_FILTER === 'updated' && !l._hasAction) return false;
         if (!q) return true;
         return Object.values(l).join(' ').toLowerCase().includes(q);
       });

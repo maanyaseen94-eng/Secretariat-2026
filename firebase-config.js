@@ -24,6 +24,10 @@ const APP_CONFIG = {
   // نقطة نهاية دالة الذكاء الاصطناعي (سيرفرلس على Vercel مثلاً)
   // شوف ملف api/generate-letter.js بنفس المشروع كمثال جاهز للنشر
   AI_ENDPOINT: "https://YOUR-VERCEL-PROJECT.vercel.app/api/generate-letter",
+
+  // نقطة نهاية رفع المرفقات (نفس مشروع Vercel، عبر بوت تيليجرام بدل Firebase Storage)
+  // شوف ملف api/upload-attachment.js وتعليمات الإعداد بـ README.md، فقرة "رفع المرفقات"
+  UPLOAD_ENDPOINT: "https://YOUR-VERCEL-PROJECT.vercel.app/api/upload-attachment",
 };
 
 const DEFAULT_OFFICE = {

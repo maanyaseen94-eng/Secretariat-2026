@@ -79,14 +79,32 @@ function requireAdmin() {
 
 /* =========================================================
    رفع مرفق (صور/PDF/مستندات وغيرها)
-   Firebase Storage غير مفعل بسبب قيود الفوترة بالعراق —
-   استبدل هذي الدالة بمنطق الرفع عبر بوت تيليجرام (Telegram Bot API)
-   متل باقي مشاريعك: أرسل الملف كـ document للبوت واحفظ رابط/معرف الملف
+   Firebase Storage غير مفعل بسبب قيود الفوترة بالعراق — الرفع يصير عبر
+   دالة سيرفرلس (api/upload-attachment.js على Vercel) ترسل الملف لبوت
+   تيليجرام وترجع رابط تحميل دائم (عبر api/download-attachment.js).
+   شوف تعليمات الإعداد بـ README.md فقرة "رفع المرفقات".
+   إذا ما انعمل إعداد APP_CONFIG.UPLOAD_ENDPOINT بعد، ترجع الدالة رابط
+   وهمي ("#") متل قبل، حتى تكمل باقي الميزات تشتغل بدون كسر.
    ========================================================= */
 async function uploadAttachment(file) {
-  console.warn("uploadAttachment: لم يتم ربط التخزين الفعلي بعد →", file.name);
-  // TODO: استدعِ endpoint سيرفرلس يرفع الملف لبوت تيليجرام ويرجع رابط
-  return { name: file.name, size: file.size, url: "#" };
+  const endpoint = APP_CONFIG.UPLOAD_ENDPOINT;
+  if (!endpoint || endpoint.includes("YOUR-VERCEL-PROJECT")) {
+    console.warn("uploadAttachment: لم يتم إعداد APP_CONFIG.UPLOAD_ENDPOINT بعد →", file.name);
+    return { name: file.name, size: file.size, url: "#" };
+  }
+
+  try {
+    const formData = new FormData();
+    formData.append("file", file);
+    const res = await fetch(endpoint, { method: "POST", body: formData });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.url) throw new Error(data.error || ("فشل الرفع (" + res.status + ")"));
+    return { name: data.name || file.name, size: file.size, url: data.url, fileId: data.fileId };
+  } catch (e) {
+    console.error("uploadAttachment:", e);
+    alert('تعذر رفع المرفق "' + file.name + '": ' + (e.message || "خطأ غير معروف"));
+    return { name: file.name, size: file.size, url: "#" };
+  }
 }
 
 /* =========================================================

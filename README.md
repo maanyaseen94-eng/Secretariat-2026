@@ -24,7 +24,15 @@ HTML/CSS/JS خام بدون أي Build step — نفس نمط مشاريعك ا�
    - أضف متغير البيئة `ANTHROPIC_API_KEY` بإعدادات Vercel.
    - انسخ رابط الدالة المنشورة وحطه بـ `APP_CONFIG.AI_ENDPOINT` داخل `firebase-config.js`.
 
-6. **رفع المرفقات**: التطبيق ما يستخدم Firebase Storage (بسبب قيود الفوترة بالعراق). دالة `uploadAttachment()` بملف `auth-guard.js` هي المكان اللي تربط فيه منطق الرفع عبر بوت تيليجرام متل باقي مشاريعك.
+6. **رفع المرفقات (عبر بوت تيليجرام)**: التطبيق ما يستخدم Firebase Storage (بسبب قيود الفوترة بالعراق) — الرفع يصير عبر بوت تيليجرام:
+   - أنشئ بوت جديد بمحادثة مع [@BotFather](https://t.me/BotFather) على تيليجرام بأمر `/newbot`، وخذ الـ Token اللي يعطيك ياه.
+   - أنشئ مجموعة أو قناة خاصة (تخزين فقط، تقدر تخليها مخفية)، وضيف البوت فيها كـ **أدمن**.
+   - احصل على `chat_id` تبع هذي المجموعة/القناة (مثلاً بإضافة بوت [@userinfobot](https://t.me/userinfobot) مؤقتاً، أو بمراسلة البوت وفتح `https://api.telegram.org/bot<TOKEN>/getUpdates`).
+   - انشر ملفي `api/upload-attachment.js` و `api/download-attachment.js` بنفس مشروع Vercel اللي نشرت فيه `api/generate-letter.js` (نفس الخطوة 5 أدناه)، وثبت `npm install formidable` إذا ما كان مثبت.
+   - أضف بإعدادات Vercel متغيرين بيئة: `TELEGRAM_BOT_TOKEN` و `TELEGRAM_CHAT_ID`.
+   - حدّث `APP_CONFIG.UPLOAD_ENDPOINT` بملف `firebase-config.js` برابط الدالة المنشورة، مثلاً:
+     `https://your-project.vercel.app/api/upload-attachment`
+   - بدون هذا الإعداد، تبقى المرفقات تُحفظ بالاسم فقط بدون رابط تحميل فعلي (زي ما كانت سابقاً).
 
 ## بنية المشروع
 
@@ -43,7 +51,9 @@ firebase-config.js     إعدادات Firebase + إعدادات عامة (AI_END
 auth-guard.js          حماية الصفحات + تسجيل خروج + رفع مرفقات + جلب اعدادات المكتب
 sidebar.js             القائمة الجانبية الموحدة (زيادة عنصر تنقّل = سطر واحد بـ NAV_ITEMS)
 firestore.rules        قواعد أمان أساسية لـ Firestore
-api/generate-letter.js مثال دالة Vercel لتوليد الكتب عبر Claude API
+api/generate-letter.js     دالة Vercel لتوليد الكتب عبر Claude API
+api/upload-attachment.js   دالة Vercel لرفع مرفق للكتب عبر بوت تيليجرام
+api/download-attachment.js دالة Vercel لتحميل مرفق سابق عبر بوت تيليجرام
 ```
 
 ## مجموعات Firestore المتوقعة
