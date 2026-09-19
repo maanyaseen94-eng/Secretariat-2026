@@ -141,7 +141,9 @@
 
         const external = incSnap.docs.map(d => {
           const l = d.data();
-          return Object.assign({ id: d.id, _source: 'incoming', _rawDate: l.receivedAt || l.createdAt || null }, l);
+          // الحالة الافتراضية "غير مقروء" لأي كتاب وارد خارجي ما انسجلت له حالة بعد
+          // (مثلاً كتاب مضاف يدوياً بدون حقل status) — تنعدّل تلقائياً لـ"مقروء"/"مؤرشف" لاحقاً
+          return Object.assign({ id: d.id, _source: 'incoming', _rawDate: l.receivedAt || l.createdAt || null, status: 'unread' }, l);
         });
 
         const internal = outSnap.docs.map(d => {
@@ -156,7 +158,9 @@
             recipientEntity: (CURRENT_PROFILE && CURRENT_PROFILE.name) || '—',
             receivedAt: fmtDateTime(l.createdAt),
             readAt: fmtDateTime(l.readAt),
-            status: l.readAt ? 'read' : 'unread',
+            // "المؤرشفة": نفس منطق الكتب الخارجية، بس نخزنه بحقل "archived" منفصل عشان لا نتعارض
+            // مع صفحة "الكتب الصادرة" اللي تعرض نفس المستند لصاحبه (المرسل) وما تستخدم status إطلاقاً
+            status: l.archived ? 'archived' : (l.readAt ? 'read' : 'unread'),
             attachments: l.attachments || [],
             _rawDate: l.createdAt || null,
           };
@@ -223,7 +227,11 @@
 
       const tbody = document.getElementById('tableBody');
       if (!pageData.length){
-        tbody.innerHTML = '<tr><td colspan="12" class="text-center text-muted py-4">لا توجد كتب لعرضها — اربط مجموعة incoming_letters بـ Firestore</td></tr>';
+        // نفرّق بين "ما فيه كتب أصلاً" و"فيه كتب بس الفلتر الحالي ما طابق شي" حتى لا نعطي انطباع خاطئ بعدم الربط
+        const msg = ALL_LETTERS.length === 0
+          ? 'لا توجد كتب لعرضها — اربط مجموعة incoming_letters بـ Firestore'
+          : 'لا توجد كتب مطابقة لهذا الفلتر';
+        tbody.innerHTML = `<tr><td colspan="12" class="text-center text-muted py-4">${msg}</td></tr>`;
       } else {
         tbody.innerHTML = pageData.map((l, i) => `
           <tr>
@@ -263,14 +271,20 @@
     async function archiveSelected(){
       const ids = getSelectedIds();
       if (!ids.length) return alert('حدد كتاب واحد على الأقل');
-      // الأرشفة تخص فقط الكتب الواردة من جهات خارجية (مجموعة incoming_letters)؛
-      // الكتب الداخلية الواصلة من موظف ثاني بالتطبيق (outgoing_letters) ما تنؤرشف من هنا حالياً
-      const archivableIds = ALL_LETTERS.filter(l => ids.includes(l.id) && l._source !== 'outgoing').map(l => l.id);
-      const skipped = ids.length - archivableIds.length;
-      if (archivableIds.length){
-        await Promise.all(archivableIds.map(id => db.collection('incoming_letters').doc(id).update({ status: 'archived' })));
+      const selected = ALL_LETTERS.filter(l => ids.includes(l.id));
+      // الكتب الخارجية (incoming_letters) تنؤرشف بحقل status، والكتب الداخلية (outgoing_letters)
+      // تنؤرشف بحقل "archived" منفصل حتى لا تتأثر صفحة "الكتب الصادرة" تبع المرسل الأصلي بنفس المستند
+      const externalIds = selected.filter(l => l._source !== 'outgoing').map(l => l.id);
+      const internalIds = selected.filter(l => l._source === 'outgoing').map(l => l.id);
+      try {
+        await Promise.all([
+          ...externalIds.map(id => db.collection('incoming_letters').doc(id).update({ status: 'archived' })),
+          ...internalIds.map(id => db.collection('outgoing_letters').doc(id).update({ archived: true }))
+        ]);
+      } catch(e){
+        console.error('تعذر أرشفة أحد الكتب:', e);
+        alert('تعذر إتمام الأرشفة لبعض الكتب — تحقق من قواعد Firestore (firestore.rules) المحدّثة');
       }
-      if (skipped) alert('تنبيه: الكتب الداخلية المرسلة من موظف آخر بالتطبيق لا يمكن أرشفتها من هذي الصفحة حالياً — تم تجاهلها (' + skipped + ')');
       loadLetters();
     }
     function downloadSelectedAttachments(){

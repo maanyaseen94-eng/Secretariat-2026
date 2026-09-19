@@ -138,16 +138,20 @@
       LETTER = letter;
 
       // تسجيل تاريخ ووقت القراءة: أول مرة يفتح فيها هذا الكتاب شخص غير الجهة اللي أنشأته
+      // (يشمل الكتب الصادرة الداخلية والكتب الواردة الخارجية على حد سواء)
       let readInfoHtml = '';
-      if (type === 'outgoing'){
+      if (type === 'outgoing' || type === 'incoming'){
         if (!letter.readAt && CURRENT_USER && CURRENT_USER.uid !== letter.createdBy){
           const readAtNow = new Date();
           try {
-            await db.collection(coll).doc(id).update({
+            const updateData = {
               readAt: firebase.firestore.FieldValue.serverTimestamp(),
               readByName: (profile && profile.name) || CURRENT_USER.displayName || null,
               readByUid: CURRENT_USER.uid
-            });
+            };
+            // نحدّث حقل status للكتب الواردة الخارجية فقط عشان فلتر "الغير مقروءة" بصفحة القائمة يبقى متطابق
+            if (type === 'incoming') updateData.status = 'read';
+            await db.collection(coll).doc(id).update(updateData);
             letter.readAt = readAtNow;
             letter.readByName = (profile && profile.name) || CURRENT_USER.displayName || null;
           } catch(e){ console.warn('تعذر تسجيل وقت القراءة:', e); }

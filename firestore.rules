@@ -29,10 +29,21 @@ service cloud.firestore {
       allow write: if hasPerm('settings');
     }
 
+    // تسجيل "قراءة الكتاب الوارد الخارجي": أي موظف يفتح الكتاب أول مرة، يسجل وقت القراءة + حالة "مقروء"
+    // (يسمح فقط بتعديل حقول القراءة والحالة نفسها، وبس أول مرة، حتى ما ينكتب فوق تاريخ قراءة موجود)
+    function isMarkingIncomingRead() {
+      let affected = request.resource.data.diff(resource.data).affectedKeys();
+      return isSignedIn()
+        && affected.hasOnly(['readAt', 'readByName', 'readByUid', 'status'])
+        && !('readAt' in resource.data);
+    }
+
     // الطلبات الواردة: أي موظف يشوف/يضيف، بس صاحب صلاحية حذف/أرشفة (أو المدير) يعدل أو يحذف
+    // + استثناء تسجيل القراءة أعلاه المسموح لأي موظف مسجّل
     match /incoming_letters/{id} {
       allow read, create: if isSignedIn();
-      allow update, delete: if hasPerm('deleteArchive');
+      allow update: if hasPerm('deleteArchive') || isMarkingIncomingRead();
+      allow delete: if hasPerm('deleteArchive');
     }
 
     // تسجيل "قراءة الكتاب": أي موظف غير الجهة المرسلة يفتح الكتاب أول مرة، يسجل وقت القراءة
@@ -45,10 +56,19 @@ service cloud.firestore {
         && request.auth.uid != resource.data.createdBy;
     }
 
-    // الكتب الرسمية الصادرة: نفس المنطق + تسجيل قراءة + حذف لصاحب صلاحية حذف/أرشفة
+    // تسمح للجهة المستلمة (toUid) فقط بأرشفة الكتاب الداخلي الواصل إليها من مكتب/موظف آخر
+    // (حقل "archived" منفصل عن أي حقل يخص المرسل الأصلي، حتى ما تتأثر صفحته "الكتب الصادرة")
+    function isArchivingAsRecipient() {
+      let affected = request.resource.data.diff(resource.data).affectedKeys();
+      return isSignedIn()
+        && affected.hasOnly(['archived'])
+        && request.auth.uid == resource.data.toUid;
+    }
+
+    // الكتب الرسمية الصادرة: نفس منطق تسجيل القراءة + أرشفة الجهة المستلمة + حذف لصاحب صلاحية حذف/أرشفة
     match /outgoing_letters/{id} {
       allow read, create: if isSignedIn();
-      allow update: if hasPerm('deleteArchive') || isMarkingOutgoingRead();
+      allow update: if hasPerm('deleteArchive') || isMarkingOutgoingRead() || isArchivingAsRecipient();
       allow delete: if hasPerm('deleteArchive');
     }
 
