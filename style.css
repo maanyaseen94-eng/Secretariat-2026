@@ -202,16 +202,11 @@ a:hover{ color:var(--accent-hover); }
   text-align:right;
   overflow:hidden;
 }
-/* رقم الكتاب وتاريخه: يكتبان فوق فراغ الفورمة الرسمية نفسها (بعد الكولون المطبوع مسبقاً بالصورة) */
-.letter-meta-value{
-  position:absolute;
-  font-size:16px;
-  direction:ltr;
-  text-align:left;
-  white-space:nowrap;
-}
-.letter-meta-value.f-number{ top:21.2%; right:85.4%; transform:translateY(-50%); }
-.letter-meta-value.f-date{ top:22.85%; right:86.1%; transform:translateY(-50%); }
+/* رقم الكتاب وتاريخه: العنوان (العدد/التأريخ) والقيمة يكتبان مع بعض كوحدة نص واحدة،
+   حتى تضمن القيمة تكون دائماً مقابل كلمتها بالضبط بغض النظر عن الخط أو حجم الشاشة */
+.letter-meta{ position:absolute; top:20.2%; right:74%; font-size:16px; line-height:1.7; text-align:right; }
+.letter-meta div{ white-space:nowrap; }
+.letter-meta .val{ direction:ltr; unicode-bidi:embed; }
 .letter-to{ position:absolute; top:26%; right:6%; left:6%; font-size:16px; text-align:right; }
 .letter-subject{ position:absolute; top:30.5%; right:6%; left:6%; font-size:16px; font-weight:700; text-align:center; }
 .letter-body-text{

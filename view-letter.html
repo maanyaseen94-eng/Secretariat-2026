@@ -82,8 +82,10 @@
         ${readInfoHtml ? `<div class="text-center">${readInfoHtml}</div>` : ''}
         <div class="letter-preview-wrap">
           <div class="letter-page" id="printArea">
-            <span class="letter-meta-value f-number">${letter.number || '—'}</span>
-            <span class="letter-meta-value f-date">${letter.date || '—'}</span>
+            <div class="letter-meta">
+              <div>العدد : <span class="val">${letter.number || '—'}</span></div>
+              <div>التأريخ : <span class="val">${letter.date || '—'}</span></div>
+            </div>
             <div class="letter-to">الى / ${letter.to || letter.senderEntity || '—'} المحترم</div>
             ${letter.body ? `<div class="letter-subject">م / ${letter.subject || '—'}</div>` : ''}
             <div class="letter-body-text">${letter.body || letter.subject || '—'}</div>
