@@ -13,7 +13,10 @@
    ملاحظة: الحد الأقصى لحجم الملف عبر Telegram Bot API هو 50 ميغابايت
    ========================================================= */
 
-const formidable = require("formidable");
+// الإصدار 3 من formidable غيّر طريقة الاستدعاء: صار لازم نستخرج الدالة بالاسم
+// (formidable) من كائن الموديول، بدل استدعاء الموديول نفسه كدالة مباشرة
+// (وهذا بالضبط سبب خطأ "formidable is not a function")
+const { formidable } = require("formidable");
 const fs = require("fs");
 
 export const config = { api: { bodyParser: false } };

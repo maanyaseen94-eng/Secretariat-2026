@@ -36,6 +36,14 @@
         <div class="panel mt-4" style="max-width:640px;">
           <div class="panel-header">تغيير كلمة المرور</div>
           <div class="panel-body">
+            <!-- حقل مخفي (بريد الحساب المسجّل دخوله فعلاً) يساعد متصفحات الحاسبات المشتركة تربط حقل
+                 "كلمة المرور الحالية" بالحساب الصحيح، بدل ما تقترح كلمة مرور محفوظة لحساب شخص ثاني
+                 استخدم نفس الجهاز قبلك (شوف ملاحظة "مهم" تحت لتفاصيل أكثر) -->
+            <input type="email" id="curEmailHint" autocomplete="username" style="display:none">
+            <div class="alert alert-warning py-2 px-3" style="font-size:12.5px;">
+              <i class="fa-solid fa-triangle-exclamation"></i>
+              مهم على الأجهزة المشتركة: إذا حقل "كلمة المرور الحالية" ظهر معبّى تلقائياً بكلمة ما تعرفها، فهذا على الأغلب اقتراح محفوظ بالمتصفح لشخص ثاني استخدم نفس الجهاز قبلك — تأكد امسحه واكتب كلمة مرورك الحالية أنت بنفسك قبل المتابعة.
+            </div>
             <div class="mb-3">
               <label class="form-label">كلمة المرور الحالية</label>
               <div class="position-relative">
@@ -78,6 +86,13 @@
     AUTH_READY.then(user => {
       document.getElementById('fName').value = user.displayName || '';
       document.getElementById('fEmail').value = user.email || '';
+      // نعبّي حقل تلميح البريد المخفي ببريد الحساب المسجّل دخوله فعلاً بهذا المتصفح،
+      // حتى مدير كلمات المرور بالمتصفح يقترح (إذا اقترح شي أصلاً) كلمة مرور نفس هذا
+      // الحساب تحديداً، وما يخلط بيها وبين حساب شخص ثاني محفوظ بنفس الجهاز
+      document.getElementById('curEmailHint').value = user.email || '';
+      // نفرغ حقل كلمة المرور الحالية بعد ما المتصفح يخلص أي اقتراح تلقائي أولي،
+      // كإجراء احترازي إضافي على الأجهزة المشتركة (مو ضمان 100% بكل المتصفحات)
+      setTimeout(() => { document.getElementById('curPassword').value = ''; }, 300);
     });
 
     function togglePwdField(inputId, btn){
