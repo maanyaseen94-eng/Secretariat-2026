@@ -57,6 +57,49 @@ function renderShell(activeKey, pageTitle) {
   if (typeof CURRENT_ROLE !== "undefined" && typeof CURRENT_PERMS !== "undefined") {
     applyPermissions(CURRENT_ROLE, CURRENT_PERMS);
   }
+
+  updateIncomingBadge();
+}
+
+/* =========================================================
+   مربع أحمر بعدد "الطلبات الواردة" غير المقروءة أمام رابطها بالقائمة
+   الجانبية، بكل صفحات التطبيق، حتى يتم الانتباه لها بسرعة. يحسب نفس
+   منطق حالة "غير مقروء" المستخدم بصفحة الطلبات الواردة (نفس المصدرين:
+   incoming_letters الخارجية + outgoing_letters الداخلية الواصلة لهذا الحساب)
+   ========================================================= */
+async function updateIncomingBadge() {
+  if (typeof db === "undefined" || typeof AUTH_READY === "undefined") return;
+  const link = document.querySelector('.sidebar-link[href="incoming-letters.html"]');
+  if (!link) return;
+  try {
+    const user = await AUTH_READY;
+    const [incSnap, outSnap] = await Promise.all([
+      db.collection("incoming_letters").get(),
+      db.collection("outgoing_letters").where("toUid", "==", user.uid).get(),
+    ]);
+    let count = 0;
+    incSnap.docs.forEach((d) => {
+      const status = d.data().status;
+      if (!status || status === "unread") count++;
+    });
+    outSnap.docs.forEach((d) => {
+      if (!d.data().readAt) count++;
+    });
+
+    let badge = link.querySelector(".sidebar-badge");
+    if (count > 0) {
+      if (!badge) {
+        badge = document.createElement("span");
+        badge.className = "sidebar-badge";
+        link.appendChild(badge);
+      }
+      badge.textContent = count > 99 ? "99+" : String(count);
+    } else if (badge) {
+      badge.remove();
+    }
+  } catch (e) {
+    console.warn("تعذر تحديث عداد الطلبات الواردة بالقائمة الجانبية:", e);
+  }
 }
 
 /* =========================================================

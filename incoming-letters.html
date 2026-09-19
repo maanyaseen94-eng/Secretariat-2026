@@ -31,8 +31,8 @@
 
               <div class="btn-group btn-group-sm ms-auto" role="group">
                 <button class="btn btn-outline-secondary active" data-filter="all" onclick="setFilter('all', this)">الكل</button>
-                <button class="btn btn-outline-secondary" data-filter="updated" onclick="setFilter('updated', this)">المحدثة</button>
-                <button class="btn btn-outline-secondary" data-filter="unread" onclick="setFilter('unread', this)">الغير مقروءة</button>
+                <button class="btn btn-outline-secondary" data-filter="updated" onclick="setFilter('updated', this)">المحدثة <span class="filter-count" data-count-for="updated"></span></button>
+                <button class="btn btn-outline-secondary" data-filter="unread" onclick="setFilter('unread', this)">الغير مقروءة <span class="filter-count" data-count-for="unread"></span></button>
                 <button class="btn btn-outline-secondary" data-filter="archived" onclick="setFilter('archived', this)">المؤرشفة</button>
               </div>
             </div>
@@ -45,7 +45,7 @@
                   <option value="10">10</option><option value="25">25</option><option value="50">50</option>
                 </select>
               </div>
-              <input type="text" id="searchInput" class="form-control form-control-sm w-auto" placeholder="ابحث..." oninput="renderTable()">
+              <input type="text" id="searchInput" class="form-control form-control-sm w-auto" placeholder="ابحث بعنوان الكتاب، الرقم، التاريخ أو الجهة..." oninput="renderTable()">
             </div>
 
             <div class="table-responsive">
@@ -207,8 +207,32 @@
         // "المحدثة": الكتب اللي تم تسجيل اجراء إداري واحد على الأقل عليها (نفس منطق تنبيه الـ10 أيام)
         if (CURRENT_FILTER === 'updated' && !l._hasAction) return false;
         if (!q) return true;
-        return Object.values(l).join(' ').toLowerCase().includes(q);
+        // بحث عام: عنوان الكتاب، الرقم، التاريخ، الجهة المرسلة والجهة المستلمة
+        const searchable = [l.subject, l.number, l.date, l.senderEntity, l.recipientEntity]
+          .filter(Boolean).join(' ').toLowerCase();
+        return searchable.includes(q);
       });
+    }
+
+    // يلوّن تبويبي "المحدثة" (أصفر) و"الغير مقروءة" (أخضر) لما فيهم كتب، مع عدد بجانب كل وحدة،
+    // حتى ينتبه المستخدم لهم بسرعة بدون لا يحتاج يضغط عليهم أول
+    function updateFilterTabStyles(){
+      const updatedCount = ALL_LETTERS.filter(l => l._hasAction).length;
+      const unreadCount = ALL_LETTERS.filter(l => l.status === 'unread').length;
+
+      const updatedBtn = document.querySelector('[data-filter="updated"]');
+      const unreadBtn = document.querySelector('[data-filter="unread"]');
+
+      updatedBtn.classList.toggle('btn-warning', updatedCount > 0);
+      updatedBtn.classList.toggle('btn-outline-secondary', updatedCount === 0);
+      unreadBtn.classList.toggle('btn-success', unreadCount > 0);
+      unreadBtn.classList.toggle('btn-outline-secondary', unreadCount === 0);
+      unreadBtn.classList.toggle('text-white', unreadCount > 0);
+
+      const updatedCountEl = updatedBtn.querySelector('[data-count-for="updated"]');
+      const unreadCountEl = unreadBtn.querySelector('[data-count-for="unread"]');
+      updatedCountEl.textContent = updatedCount > 0 ? '(' + updatedCount + ')' : '';
+      unreadCountEl.textContent = unreadCount > 0 ? '(' + unreadCount + ')' : '';
     }
 
     function statusBadge(status){
@@ -218,6 +242,7 @@
     }
 
     function renderTable(){
+      updateFilterTabStyles();
       const pageSize = parseInt(document.getElementById('pageSizeSelect').value, 10);
       const data = filteredLetters();
       const totalPages = Math.max(1, Math.ceil(data.length / pageSize));
