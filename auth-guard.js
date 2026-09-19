@@ -98,7 +98,14 @@ async function uploadAttachment(file) {
     formData.append("file", file);
     const res = await fetch(endpoint, { method: "POST", body: formData });
     const data = await res.json().catch(() => ({}));
-    if (!res.ok || !data.url) throw new Error(data.error || ("فشل الرفع (" + res.status + ")"));
+    // نظهر تفاصيل الخطأ الفعلية (data.details) من السيرفر إذا موجودة، حتى نعرف السبب
+    // الحقيقي (رمز HTTP + رسالة تيليجرام/formidable) بدل رسالة عامة ما تفيد بالتشخيص
+    if (!res.ok || !data.url) {
+      const parts = ["فشل الرفع (كود " + res.status + ")"];
+      if (data.error) parts.push(data.error);
+      if (data.details) parts.push(String(data.details));
+      throw new Error(parts.join(" — "));
+    }
     return { name: data.name || file.name, size: file.size, url: data.url, fileId: data.fileId };
   } catch (e) {
     console.error("uploadAttachment:", e);
