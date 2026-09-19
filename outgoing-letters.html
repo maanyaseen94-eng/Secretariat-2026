@@ -23,13 +23,16 @@
             <button class="btn btn-sm btn-light" onclick="location.href='create-letter.html'"><i class="fa-solid fa-plus"></i> كتاب رسمي جديد</button>
           </div>
           <div class="panel-body">
+            <div class="d-flex justify-content-end mb-2">
+              <button class="btn btn-outline-success btn-sm" onclick="exportExcel()"><i class="fa-solid fa-file-excel"></i> تصدير Excel</button>
+            </div>
             <div class="table-responsive">
               <table class="table table-hover align-middle">
                 <thead>
-                  <tr><th>ت</th><th>الرقم</th><th>عنوان الكتاب</th><th>الى</th><th>التاريخ</th><th>خيارات</th></tr>
+                  <tr><th>ت</th><th>الرقم</th><th>عنوان الكتاب</th><th>الى</th><th>التاريخ</th><th>تاريخ ووقت القراءة</th><th>خيارات</th></tr>
                 </thead>
                 <tbody id="tableBody">
-                  <tr><td colspan="6" class="text-center text-muted py-4">جارِ التحميل...</td></tr>
+                  <tr><td colspan="7" class="text-center text-muted py-4">جارِ التحميل...</td></tr>
                 </tbody>
               </table>
             </div>
@@ -41,6 +44,7 @@
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
@@ -50,27 +54,82 @@
   <script>
     renderShell('outgoing', 'الكتب الرسمية الصادرة');
 
-    AUTH_READY.then(async () => {
+    let ALL_OUTGOING = [];
+    let CAN_DELETE = false;
+
+    // كل موظف يشوف الكتب اللي هو نفسه أنشأها بس؛ المدير (سكرتير النائب) يشوف كل الكتب الصادرة من الكل للمتابعة العامة
+    PERMS_READY.then(({ role }) => {
+      CAN_DELETE = hasPermission('deleteArchive');
+      loadLetters(role);
+    });
+
+    function formatReadAt(l){
+      if (!l.readAt) return '—';
+      const d = l.readAt.toDate ? l.readAt.toDate() : new Date(l.readAt);
+      return new Date(d).toLocaleString('ar-IQ') + (l.readByName ? `<br><span class="text-muted" style="font-size:11px;">بواسطة ${l.readByName}</span>` : '');
+    }
+
+    async function loadLetters(role){
       const tbody = document.getElementById('tableBody');
       try {
-        const snap = await db.collection('outgoing_letters').orderBy('createdAt', 'desc').get();
-        if (!snap.size){
-          tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">لا توجد كتب رسمية بعد — أنشئ واحد من زر "كتاب رسمي جديد"</td></tr>';
-          return;
-        }
-        tbody.innerHTML = snap.docs.map((d, i) => {
-          const l = d.data();
-          return `<tr>
-            <td>${i+1}</td><td>${l.number || '—'}</td><td>${l.subject || '—'}</td>
-            <td>${l.to || '—'}</td><td>${l.date || '—'}</td>
-            <td><button class="btn btn-success btn-sm" onclick="location.href='view-letter.html?type=outgoing&id=${d.id}'"><i class="fa-solid fa-eye"></i> عرض</button></td>
-          </tr>`;
-        }).join('');
+        const snap = (role === 'admin')
+          ? await db.collection('outgoing_letters').get()
+          : await db.collection('outgoing_letters').where('createdBy', '==', CURRENT_USER.uid).get();
+        ALL_OUTGOING = snap.docs.map(d => Object.assign({ id: d.id }, d.data()));
+        // ترتيب تنازلي حسب تاريخ الإنشاء (بدون الاعتماد على orderBy بـ Firestore تجنباً لأي فهرسة مركبة إضافية)
+        ALL_OUTGOING.sort((a, b) => {
+          const ta = a.createdAt && a.createdAt.toMillis ? a.createdAt.toMillis() : 0;
+          const tb = b.createdAt && b.createdAt.toMillis ? b.createdAt.toMillis() : 0;
+          return tb - ta;
+        });
+        renderTable();
       } catch(e){
         console.warn('تعذر جلب الكتب الصادرة:', e);
-        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">تعذر الاتصال بـ Firestore</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4">تعذر الاتصال بـ Firestore</td></tr>';
       }
-    });
+    }
+
+    function renderTable(){
+      const tbody = document.getElementById('tableBody');
+      if (!ALL_OUTGOING.length){
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4">لا توجد كتب رسمية بعد — أنشئ واحد من زر "كتاب رسمي جديد"</td></tr>';
+        return;
+      }
+      tbody.innerHTML = ALL_OUTGOING.map((l, i) => `<tr>
+        <td>${i+1}</td><td>${l.number || '—'}</td><td>${l.subject || '—'}</td>
+        <td>${l.to || '—'}</td><td>${l.date || '—'}</td>
+        <td style="font-size:12.5px;">${formatReadAt(l)}</td>
+        <td>
+          <button class="btn btn-success btn-sm" onclick="location.href='view-letter.html?type=outgoing&id=${l.id}'"><i class="fa-solid fa-eye"></i> عرض</button>
+          ${CAN_DELETE ? `<button class="btn btn-outline-danger btn-sm" onclick="deleteLetter('${l.id}')"><i class="fa-solid fa-trash"></i> حذف</button>` : ''}
+        </td>
+      </tr>`).join('');
+    }
+
+    async function deleteLetter(id){
+      if (!confirm('حذف هذا الكتاب الرسمي نهائياً؟ لا يمكن التراجع عن هذا الإجراء')) return;
+      try {
+        await db.collection('outgoing_letters').doc(id).delete();
+        ALL_OUTGOING = ALL_OUTGOING.filter(l => l.id !== id);
+        renderTable();
+      } catch(e){
+        console.error(e);
+        alert('تعذر الحذف — تحقق من صلاحياتك');
+      }
+    }
+
+    function exportExcel(){
+      const data = ALL_OUTGOING.map(l => ({
+        'الرقم': l.number, 'عنوان الكتاب': l.subject, 'الى': l.to, 'التاريخ': l.date,
+        'انشأه': l.createdByName || '', 'منصبه': l.createdByTitle || '',
+        'تاريخ ووقت القراءة': l.readAt ? new Date(l.readAt.toDate ? l.readAt.toDate() : l.readAt).toLocaleString('ar-IQ') : '',
+        'قرأه': l.readByName || ''
+      }));
+      const ws = XLSX.utils.json_to_sheet(data);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'الكتب الصادرة');
+      XLSX.writeFile(wb, 'الكتب_الرسمية_الصادرة.xlsx');
+    }
   </script>
 </body>
 </html>

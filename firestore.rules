@@ -16,9 +16,10 @@ service cloud.firestore {
       return isAdmin() || (isSignedIn() && myProfile().permissions.get(p, false) == true);
     }
 
-    // ملف صلاحيات كل مستخدم: يقرأ ملفه الخاص، والمدير بس يقدر يعدل/يشوف الكل
+    // ملف صلاحيات كل مستخدم: أي موظف مسجل يقدر يشوف قائمة الموظفين (بس عشان مطابقة اسم "الى" بكتاب صادر
+    // بحساب الموظف المستلم تلقائياً)، لكن التعديل يبقى للمدير حصراً
     match /users/{uid} {
-      allow read: if isSignedIn() && (request.auth.uid == uid || isAdmin());
+      allow read: if isSignedIn();
       allow write: if isAdmin();
     }
 
@@ -34,10 +35,21 @@ service cloud.firestore {
       allow update, delete: if hasPerm('deleteArchive');
     }
 
-    // الكتب الرسمية الصادرة: نفس المنطق
+    // تسجيل "قراءة الكتاب": أي موظف غير الجهة المرسلة يفتح الكتاب أول مرة، يسجل وقت القراءة
+    // (يسمح فقط بتعديل حقول القراءة نفسها، وبس أول مرة، حتى ما ينكتب فوق تاريخ قراءة موجود)
+    function isMarkingOutgoingRead() {
+      let affected = request.resource.data.diff(resource.data).affectedKeys();
+      return isSignedIn()
+        && affected.hasOnly(['readAt', 'readByName', 'readByUid'])
+        && !('readAt' in resource.data)
+        && request.auth.uid != resource.data.createdBy;
+    }
+
+    // الكتب الرسمية الصادرة: نفس المنطق + تسجيل قراءة + حذف لصاحب صلاحية حذف/أرشفة
     match /outgoing_letters/{id} {
       allow read, create: if isSignedIn();
-      allow update, delete: if hasPerm('deleteArchive');
+      allow update: if hasPerm('deleteArchive') || isMarkingOutgoingRead();
+      allow delete: if hasPerm('deleteArchive');
     }
 
     // عداد رقم الكتاب الرسمي: أي موظف مسجل يقدر يزيده تلقائياً عند إرسال كتاب

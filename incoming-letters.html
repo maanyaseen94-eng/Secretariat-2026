@@ -97,17 +97,48 @@
     let CURRENT_FILTER = 'all';
     let CURRENT_PAGE = 1;
 
-    AUTH_READY.then(loadLetters);
     PERMS_READY.then(() => {
       if (!hasPermission('deleteArchive')) {
         document.querySelector('button[onclick="archiveSelected()"]').style.display = 'none';
       }
+      loadLetters();
     });
+
+    // نحول Timestamp/Date تبع Firestore لنص تاريخ+وقت مقروء
+    function fmtDateTime(v){
+      if (!v) return '';
+      const d = v.toDate ? v.toDate() : new Date(v);
+      return isNaN(d) ? '' : d.toLocaleString('ar-IQ');
+    }
 
     async function loadLetters(){
       try {
-        const snap = await db.collection('incoming_letters').orderBy('date', 'desc').get();
-        ALL_LETTERS = snap.docs.map(d => Object.assign({ id: d.id }, d.data()));
+        // مصدرين: (1) incoming_letters = كتب واردة من جهات خارجية تنضاف يدوياً
+        // (2) outgoing_letters اللي "الى" تبعها انربط تلقائياً بحساب موظف بالتطبيق (toUid) = كتاب صادر من مكتب/موظف ثاني وواصل لهذا الحساب
+        const [incSnap, outSnap] = await Promise.all([
+          db.collection('incoming_letters').get(),
+          CURRENT_USER ? db.collection('outgoing_letters').where('toUid', '==', CURRENT_USER.uid).get() : Promise.resolve({ docs: [] })
+        ]);
+
+        const external = incSnap.docs.map(d => Object.assign({ id: d.id, _source: 'incoming' }, d.data()));
+
+        const internal = outSnap.docs.map(d => {
+          const l = d.data();
+          return {
+            id: d.id,
+            _source: 'outgoing',
+            subject: l.subject,
+            number: l.number,
+            date: l.date,
+            senderEntity: l.createdByName ? (l.createdByName + (l.createdByTitle ? ' - ' + l.createdByTitle : '')) : '—',
+            recipientEntity: (CURRENT_PROFILE && CURRENT_PROFILE.name) || '—',
+            receivedAt: fmtDateTime(l.createdAt),
+            readAt: fmtDateTime(l.readAt),
+            status: l.readAt ? 'read' : 'unread',
+          };
+        });
+
+        ALL_LETTERS = external.concat(internal).sort((a, b) => (b.date || '').localeCompare(a.date || ''));
       } catch(e){
         console.warn('تعذر جلب الطلبات الواردة من Firestore (تحقق من الربط):', e);
         ALL_LETTERS = [];
@@ -164,8 +195,8 @@
             <td>${l.readAt || '—'}</td>
             <td>${statusBadge(l.status)}</td>
             <td>
-              <button class="btn btn-success btn-sm" onclick="location.href='view-letter.html?type=incoming&id=${l.id}'"><i class="fa-solid fa-eye"></i> عرض</button>
-              <button class="btn btn-primary btn-sm" onclick="alert('اربط رابط المرفق الفعلي هنا')"><i class="fa-solid fa-download"></i> تحميل</button>
+              <button class="btn btn-success btn-sm" onclick="location.href='view-letter.html?type=${l._source === 'outgoing' ? 'outgoing' : 'incoming'}&id=${l.id}'"><i class="fa-solid fa-eye"></i> عرض</button>
+              ${l._source === 'outgoing' ? '' : '<button class="btn btn-primary btn-sm" onclick="alert(\'اربط رابط المرفق الفعلي هنا\')"><i class="fa-solid fa-download"></i> تحميل</button>'}
             </td>
           </tr>`).join('');
       }
@@ -186,7 +217,14 @@
     async function archiveSelected(){
       const ids = getSelectedIds();
       if (!ids.length) return alert('حدد كتاب واحد على الأقل');
-      await Promise.all(ids.map(id => db.collection('incoming_letters').doc(id).update({ status: 'archived' })));
+      // الأرشفة تخص فقط الكتب الواردة من جهات خارجية (مجموعة incoming_letters)؛
+      // الكتب الداخلية الواصلة من موظف ثاني بالتطبيق (outgoing_letters) ما تنؤرشف من هنا حالياً
+      const archivableIds = ALL_LETTERS.filter(l => ids.includes(l.id) && l._source !== 'outgoing').map(l => l.id);
+      const skipped = ids.length - archivableIds.length;
+      if (archivableIds.length){
+        await Promise.all(archivableIds.map(id => db.collection('incoming_letters').doc(id).update({ status: 'archived' })));
+      }
+      if (skipped) alert('تنبيه: الكتب الداخلية المرسلة من موظف آخر بالتطبيق لا يمكن أرشفتها من هذي الصفحة حالياً — تم تجاهلها (' + skipped + ')');
       loadLetters();
     }
     function downloadSelectedAttachments(){

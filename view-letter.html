@@ -55,14 +55,35 @@
         letter = doc.data();
       } catch(e){ content.innerHTML = '<p class="text-danger">تعذر جلب بيانات الكتاب</p>'; return; }
 
+      // تسجيل تاريخ ووقت القراءة: أول مرة يفتح فيها هذا الكتاب شخص غير الجهة اللي أنشأته
+      let readInfoHtml = '';
+      if (type === 'outgoing'){
+        const { profile } = await PERMS_READY;
+        if (!letter.readAt && CURRENT_USER && CURRENT_USER.uid !== letter.createdBy){
+          const readAtNow = new Date();
+          try {
+            await db.collection(coll).doc(id).update({
+              readAt: firebase.firestore.FieldValue.serverTimestamp(),
+              readByName: (profile && profile.name) || CURRENT_USER.displayName || null,
+              readByUid: CURRENT_USER.uid
+            });
+            letter.readAt = readAtNow;
+            letter.readByName = (profile && profile.name) || CURRENT_USER.displayName || null;
+          } catch(e){ console.warn('تعذر تسجيل وقت القراءة:', e); }
+        }
+        const readAtDisplay = letter.readAt && letter.readAt.toDate ? letter.readAt.toDate() : letter.readAt;
+        readInfoHtml = `<div class="alert alert-light border d-inline-block px-3 py-2 mb-3" style="font-size:12.5px;">
+          <i class="fa-solid fa-eye text-success"></i>
+          ${readAtDisplay ? `تمت قراءة الكتاب بتاريخ ${new Date(readAtDisplay).toLocaleString('ar-IQ')}${letter.readByName ? ' بواسطة ' + letter.readByName : ''}` : 'لم يتم فتح الكتاب من الجهة المستلمة بعد'}
+        </div>`;
+      }
+
       content.innerHTML = `
+        ${readInfoHtml ? `<div class="text-center">${readInfoHtml}</div>` : ''}
         <div class="letter-preview-wrap">
           <div class="letter-page" id="printArea">
-            <img class="letterhead-img" src="letterhead.png" alt="ترويسة سكرتارية النائب">
-            <div class="letter-meta">
-              <div>العدد : ${letter.number || '—'}</div>
-              <div>التأريخ : ${letter.date || '—'}</div>
-            </div>
+            <span class="letter-meta-value f-number">${letter.number || '—'}</span>
+            <span class="letter-meta-value f-date">${letter.date || '—'}</span>
             <div class="letter-to">الى / ${letter.to || letter.senderEntity || '—'} المحترم</div>
             ${letter.body ? `<div class="letter-subject">م / ${letter.subject || '—'}</div>` : ''}
             <div class="letter-body-text">${letter.body || letter.subject || '—'}</div>
@@ -71,7 +92,6 @@
               <div class="sig-name">${letter.createdByName || cfg.managerName || cfg.officeName || ''}</div>
               <div class="sig-title">${letter.createdByTitle || ''}</div>
             </div>
-            <div class="letter-footer-pattern"></div>
           </div>
         </div>
         <div class="d-flex gap-2 justify-content-center mt-3">

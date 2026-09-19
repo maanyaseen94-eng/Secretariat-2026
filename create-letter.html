@@ -57,11 +57,8 @@
               <div class="col-lg-6">
                 <div class="letter-preview-wrap">
                   <div class="letter-page" id="printArea">
-                    <img class="letterhead-img" src="letterhead.png" alt="ترويسة سكرتارية النائب">
-                    <div class="letter-meta">
-                      <div>العدد : <span id="pNumber">١</span></div>
-                      <div>التأريخ : <span id="pDate">—</span></div>
-                    </div>
+                    <span class="letter-meta-value f-number" id="pNumber">١</span>
+                    <span class="letter-meta-value f-date" id="pDate">—</span>
                     <div class="letter-to">
                       الى / <span id="pTo">—</span> المحترم
                     </div>
@@ -72,7 +69,6 @@
                       <div class="sig-name" id="pSignerName">—</div>
                       <div class="sig-title" id="pSignerTitle"></div>
                     </div>
-                    <div class="letter-footer-pattern"></div>
                   </div>
                 </div>
                 <div class="d-flex gap-2 justify-content-center mt-3">
@@ -130,9 +126,10 @@
       document.getElementById('fDate').value = new Date().toISOString().slice(0,10);
       syncPreview();
 
-      // رقم كتاب تلقائي (معاينة فقط) — الرقم الفعلي يُحجز لحظة الإرسال حتى ما يتكرر
+      // رقم كتاب تلقائي (معاينة فقط) — تسلسل مستقل لكل حساب/موظف على حدة (مو رقم واحد مشترك بين الجميع)
+      // الرقم الفعلي يُحجز لحظة الإرسال حتى ما يتكرر
       try {
-        const counterSnap = await db.collection('counters').doc('outgoing_letters').get();
+        const counterSnap = await db.collection('counters').doc(outgoingCounterId()).get();
         const nextNum = (counterSnap.exists ? (counterSnap.data().value || 0) : 0) + 1;
         document.getElementById('fNumber').value = nextNum;
         document.getElementById('pNumber').textContent = nextNum;
@@ -198,6 +195,24 @@
       });
     }
 
+    // معرّف عداد رقم الكتاب الخاص بهذا الحساب — كل موظف عنده تسلسله المستقل (1، 2، 3...) بدل رقم مشترك بين الجميع
+    function outgoingCounterId(){
+      return 'outgoing_' + (CURRENT_USER ? CURRENT_USER.uid : 'anon');
+    }
+
+    // يدوّر إذا نص حقل "الى" يحتوي اسم موظف مسجل بمجموعة users (يعني الجهة المستلمة زميل بالتطبيق)
+    // ويرجع الـ uid تبعه لو انلكى تطابق، وإلا null (تبقى جهة خارجية عادية بدون ربط)
+    async function resolveInternalRecipientUid(toText){
+      try {
+        const snap = await db.collection('users').get();
+        const match = snap.docs.find(d => {
+          const n = (d.data().name || '').trim();
+          return n && toText.includes(n);
+        });
+        return match ? match.id : null;
+      } catch(e){ return null; }
+    }
+
     async function sendLetter(){
       const subject = document.getElementById('fSubject').value.trim();
       const to = document.getElementById('fTo').value.trim();
@@ -207,10 +222,14 @@
       const files = [...document.querySelectorAll('.attachment-input')].map(i => i.files[0]).filter(Boolean);
       const attachments = await Promise.all(files.map(uploadAttachment));
 
+      // إذا "الى" تطابق اسم موظف مسجل بالتطبيق (زميل بمكتب ثاني مثلاً)، نربط الكتاب بحسابه
+      // حتى يظهر تلقائياً بصفحة "الطلبات الواردة" الخاصة فيه، بدل ما يبقى الكتاب صادر بس عند المرسل
+      const toUid = await resolveInternalRecipientUid(to);
+
       try {
         // نحجز رقم الكتاب داخل معاملة (transaction) حتى يزيد تلقائياً بأمان مع كل إرسال
-        // ولا يتكرر حتى لو أكثر من موظف يرسل بنفس اللحظة
-        const counterRef = db.collection('counters').doc('outgoing_letters');
+        // ولا يتكرر حتى لو أكثر من موظف يرسل بنفس اللحظة — وعداد مستقل لكل حساب (outgoingCounterId)
+        const counterRef = db.collection('counters').doc(outgoingCounterId());
         const newLetterRef = db.collection('outgoing_letters').doc();
         await db.runTransaction(async (tx) => {
           const counterSnap = await tx.get(counterRef);
@@ -219,7 +238,7 @@
           tx.set(newLetterRef, {
             number: nextNum,
             date: document.getElementById('fDate').value,
-            subject, to, body, attachments,
+            subject, to, toUid, body, attachments,
             createdAt: firebase.firestore.FieldValue.serverTimestamp(),
             createdBy: CURRENT_USER ? CURRENT_USER.uid : null,
             createdByName: (CURRENT_PROFILE && CURRENT_PROFILE.name) || (CURRENT_USER && CURRENT_USER.displayName) || null,
