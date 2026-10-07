@@ -40,6 +40,14 @@
                   <input type="text" class="form-control" id="fTo" required>
                 </div>
                 <div class="mb-3">
+                  <label class="form-label d-flex justify-content-between align-items-center">
+                    <span>نسخة منه الى (اختياري)</span>
+                    <button type="button" class="btn btn-success btn-sm" onclick="addCcField()"><i class="fa-solid fa-plus"></i> إضافة جهة</button>
+                  </label>
+                  <div id="ccFields"></div>
+                  <div class="form-text">جهات إضافية يصلها الكتاب نسخةً — تظهر على نص الكتاب المطبوع تحت عنوان "نسخة منه الى" مع ملاحظة اختيارية لكل جهة (مثال: للاطلاع والمتابعة)</div>
+                </div>
+                <div class="mb-3">
                   <label class="form-label">نص محتوى الكتاب الرسمي *</label>
                   <textarea class="form-control" id="fBody" rows="6" required></textarea>
                 </div>
@@ -66,6 +74,7 @@
                     </div>
                     <div class="letter-subject">م / <span id="pSubject">—</span></div>
                     <div class="letter-body-text" id="pBody">—</div>
+                    <div class="cc-section" id="pCcSection"></div>
                     <div class="signature-block">
                       <div class="sig-img-wrap" id="letterStamp">ختم<br>المكتب</div>
                       <div class="sig-name" id="pSignerName">—</div>
@@ -180,6 +189,10 @@
     ['fDate','fTo','fBody','fSubject'].forEach(id => {
       document.addEventListener('input', (e) => { if (e.target.id === id) syncPreview(); });
     });
+    // حقول "نسخة منه الى" تُضاف ديناميكياً بدون id ثابت، فنربطها بصنفها (class) بدل الـ id
+    document.addEventListener('input', (e) => {
+      if (e.target.classList && (e.target.classList.contains('cc-entity') || e.target.classList.contains('cc-note'))) syncPreview();
+    });
 
     function syncPreview(){
       const dateVal = document.getElementById('fDate').value;
@@ -187,6 +200,47 @@
       document.getElementById('pTo').textContent = document.getElementById('fTo').value || '—';
       document.getElementById('pSubject').textContent = document.getElementById('fSubject').value || '—';
       document.getElementById('pBody').textContent = document.getElementById('fBody').value || '—';
+      renderCcSection(getCcList(), 'pCcSection');
+    }
+
+    /* =========================================================
+       "نسخة منه الى": جهات إضافية تصل الكتاب نسخةً، كل جهة لها حقلين:
+       "الجهة" (اسم الجهة) و"ملاحظات" اختيارية تحتها (مثل "للاطلاع والمتابعة").
+       تظهر على نص الكتاب المطبوع تحت عنوان "نسخة منه الى" بالشكل:
+       - <الجهة> .......... <الملاحظات>
+       وإذا طابقت الجهة اسم موظف مسجل بالتطبيق (resolveInternalRecipientUid)
+       يصل الكتاب تلقائياً لصفحة "الطلبات الواردة" الخاصة به كـ"نسخة"
+       ========================================================= */
+    function addCcField(entityVal, noteVal){
+      const wrap = document.getElementById('ccFields');
+      const row = document.createElement('div');
+      row.className = 'border rounded p-2 mb-2 cc-field-row';
+      row.innerHTML = `
+        <div class="d-flex gap-2 align-items-center mb-2">
+          <input type="text" class="form-control form-control-sm cc-entity" placeholder="الجهة (مثال: احمد حازم داود - مساعد سكرتير النائب)">
+          <button type="button" class="btn btn-sm btn-outline-danger" title="حذف"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <input type="text" class="form-control form-control-sm cc-note" placeholder="ملاحظات (اختياري، مثال: للاطلاع والمتابعة)">`;
+      row.querySelector('.cc-entity').value = entityVal || '';
+      row.querySelector('.cc-note').value = noteVal || '';
+      row.querySelector('button').onclick = () => { row.remove(); syncPreview(); };
+      wrap.appendChild(row);
+      syncPreview();
+    }
+
+    function getCcList(){
+      return [...document.querySelectorAll('.cc-field-row')].map(row => ({
+        entity: row.querySelector('.cc-entity').value.trim(),
+        note: row.querySelector('.cc-note').value.trim()
+      })).filter(c => c.entity);
+    }
+
+    function renderCcSection(list, elId){
+      const el = document.getElementById(elId);
+      if (!el) return;
+      if (!list || !list.length){ el.innerHTML = ''; return; }
+      el.innerHTML = '<div class="cc-title">نسخة منه الى</div>' +
+        list.map(c => `<div class="cc-item">- ${c.entity}${c.note ? ' .......... ' + c.note : ''}</div>`).join('');
     }
 
     function addAttachmentField(){
@@ -236,6 +290,11 @@
       // حتى يظهر تلقائياً بصفحة "الطلبات الواردة" الخاصة فيه، بدل ما يبقى الكتاب صادر بس عند المرسل
       const toUid = await resolveInternalRecipientUid(to);
 
+      // "نسخة منه الى": نفس منطق الربط التلقائي أعلاه، بس لكل جهة إضافية على حدة —
+      // إذا طابقت جهة نسخة اسم موظف مسجل، يصله الكتاب كـ"نسخة" بصفحة "الطلبات الواردة" الخاصة به
+      const ccList = getCcList();
+      const ccUids = (await Promise.all(ccList.map(c => resolveInternalRecipientUid(c.entity)))).filter(Boolean);
+
       try {
         // نحجز رقم الكتاب داخل معاملة (transaction) حتى يزيد تلقائياً بأمان مع كل إرسال
         // ولا يتكرر حتى لو أكثر من موظف يرسل بنفس اللحظة — وعداد مستقل لكل حساب (outgoingCounterId)
@@ -249,6 +308,7 @@
             number: nextNum,
             date: document.getElementById('fDate').value,
             subject, to, toUid, body, attachments,
+            ccList, ccUids,
             createdAt: firebase.firestore.FieldValue.serverTimestamp(),
             createdBy: CURRENT_USER ? CURRENT_USER.uid : null,
             createdByName: (CURRENT_PROFILE && CURRENT_PROFILE.name) || (CURRENT_USER && CURRENT_USER.displayName) || null,

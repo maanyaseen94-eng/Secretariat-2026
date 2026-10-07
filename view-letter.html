@@ -183,6 +183,11 @@
             <div class="letter-to">الى / ${letter.to || letter.senderEntity || '—'} المحترم</div>
             ${letter.body ? `<div class="letter-subject">م / ${letter.subject || '—'}</div>` : ''}
             <div class="letter-body-text">${letter.body || letter.subject || '—'}</div>
+            ${letter.ccList && letter.ccList.length ? `
+            <div class="cc-section">
+              <div class="cc-title">نسخة منه الى</div>
+              ${letter.ccList.map(c => `<div class="cc-item">- ${c.entity}${c.note ? ' .......... ' + c.note : ''}</div>`).join('')}
+            </div>` : ''}
             <div class="signature-block">
               <div class="sig-img-wrap" ${letter.createdBySignatureUrl ? 'style="border:none;"' : ''}>${letter.createdBySignatureUrl ? `<img src="${letter.createdBySignatureUrl}" alt="توقيع" style="width:100%;height:100%;object-fit:contain;">` : 'ختم<br>المكتب'}</div>
               <div class="sig-name">${letter.createdByName || cfg.managerName || cfg.officeName || ''}</div>

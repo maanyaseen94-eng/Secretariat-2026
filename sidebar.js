@@ -73,9 +73,10 @@ async function updateIncomingBadge() {
   if (!link) return;
   try {
     const user = await AUTH_READY;
-    const [incSnap, outSnap] = await Promise.all([
+    const [incSnap, outSnap, ccSnap] = await Promise.all([
       db.collection("incoming_letters").get(),
       db.collection("outgoing_letters").where("toUid", "==", user.uid).get(),
+      db.collection("outgoing_letters").where("ccUids", "array-contains", user.uid).get(),
     ]);
     let count = 0;
     incSnap.docs.forEach((d) => {
@@ -84,6 +85,12 @@ async function updateIncomingBadge() {
     });
     outSnap.docs.forEach((d) => {
       if (!d.data().readAt) count++;
+    });
+    // الكتب الواصلة كـ"نسخة منه الى" (ccUids) — نفس منطق العد، بس نتجنب عدّ الكتاب مرتين
+    // إذا كان هذا الحساب مستلماً أصلياً وبقائمة النسخ بنفس اللحظة (حالة نادرة)
+    ccSnap.docs.forEach((d) => {
+      const alreadyCounted = outSnap.docs.some((o) => o.id === d.id);
+      if (!alreadyCounted && !d.data().readAt) count++;
     });
 
     let badge = link.querySelector(".sidebar-badge");

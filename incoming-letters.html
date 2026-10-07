@@ -132,11 +132,13 @@
 
     async function loadLetters(){
       try {
-        // مصدرين: (1) incoming_letters = كتب واردة من جهات خارجية تنضاف يدوياً
-        // (2) outgoing_letters اللي "الى" تبعها انربط تلقائياً بحساب موظف بالتطبيق (toUid) = كتاب صادر من مكتب/موظف ثاني وواصل لهذا الحساب
-        const [incSnap, outSnap] = await Promise.all([
+        // ثلاثة مصادر: (1) incoming_letters = كتب واردة من جهات خارجية تنضاف يدوياً
+        // (2) outgoing_letters اللي "الى" تبعها انربط تلقائياً بحساب موظف بالتطبيق (toUid) = كتاب صادر من مكتب/موظف ثاني وواصل لهذا الحساب كمستلم أصلي
+        // (3) outgoing_letters اللي هذا الحساب مذكور بـ"نسخة منه الى" تبعها (ccUids) = كتاب وصل كنسخة للاطلاع والمتابعة
+        const [incSnap, outSnap, ccSnap] = await Promise.all([
           db.collection('incoming_letters').get(),
-          CURRENT_USER ? db.collection('outgoing_letters').where('toUid', '==', CURRENT_USER.uid).get() : Promise.resolve({ docs: [] })
+          CURRENT_USER ? db.collection('outgoing_letters').where('toUid', '==', CURRENT_USER.uid).get() : Promise.resolve({ docs: [] }),
+          CURRENT_USER ? db.collection('outgoing_letters').where('ccUids', 'array-contains', CURRENT_USER.uid).get() : Promise.resolve({ docs: [] })
         ]);
 
         const external = incSnap.docs.map(d => {
@@ -146,8 +148,10 @@
           return Object.assign({ id: d.id, _source: 'incoming', _rawDate: l.receivedAt || l.createdAt || null, status: 'unread' }, l);
         });
 
-        const internal = outSnap.docs.map(d => {
+        // كتاب واحد يتحول لصف واحد بالجدول — isCc تميّز الكتاب الواصل كـ"نسخة" (وليس كمستلم أصلي) بإضافة "(نسخة)" لاسم الجهة المستلمة
+        function mapInternal(d, isCc){
           const l = d.data();
+          const myName = (CURRENT_PROFILE && CURRENT_PROFILE.name) || '—';
           return {
             id: d.id,
             _source: 'outgoing',
@@ -155,7 +159,7 @@
             number: l.number,
             date: l.date,
             senderEntity: l.createdByName ? (l.createdByName + (l.createdByTitle ? ' - ' + l.createdByTitle : '')) : '—',
-            recipientEntity: (CURRENT_PROFILE && CURRENT_PROFILE.name) || '—',
+            recipientEntity: isCc ? (myName + ' (نسخة)') : myName,
             receivedAt: fmtDateTime(l.createdAt),
             readAt: fmtDateTime(l.readAt),
             // "المؤرشفة": نفس منطق الكتب الخارجية، بس نخزنه بحقل "archived" منفصل عشان لا نتعارض
@@ -164,7 +168,11 @@
             attachments: l.attachments || [],
             _rawDate: l.createdAt || null,
           };
-        });
+        }
+
+        // إذا كتاب وصل كمستلم أصلي وأيضاً بقائمة النسخ بنفس اللحظة (حالة نادرة)، يبقى مرة وحدة بس كمستلم أصلي
+        const ccDocsOnly = ccSnap.docs.filter(d => !outSnap.docs.some(o => o.id === d.id));
+        const internal = outSnap.docs.map(d => mapInternal(d, false)).concat(ccDocsOnly.map(d => mapInternal(d, true)));
 
         ALL_LETTERS = external.concat(internal).sort((a, b) => (b.date || '').localeCompare(a.date || ''));
 
